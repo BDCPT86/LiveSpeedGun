@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cricket Speed Gun</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080c08;
+  --panel: #0e150e;
+  --border: #1e2e1e;
+  --amber: #f5a623;
+  --red: #e74c3c;
+  --green: #2ecc71;
+  --blue: #3498db;
+  --text: #e8dcc8;
+  --dim: #5a7a5a;
+  --crease: #e8dcc8;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family:'Rajdhani',sans-serif; color:var(--text); }
+
+/* ── SCREENS ── */
+.screen { position:absolute; inset:0; display:flex; flex-direction:column; transition:opacity 0.3s; }
+.screen.hidden { opacity:0; pointer-events:none; }
+
+/* ── SCANLINES ── */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
+}
+
+/* ══════════════════════════════
+   SCREEN 1 — SETUP
+══════════════════════════════ */
+#screenSetup {
+  justify-content:center; align-items:center; padding:24px;
+  background: radial-gradient(ellipse at 50% 30%, #0d1f0d 0%, #080c08 70%);
+}
+.logo { text-align:center; margin-bottom:36px; }
+.logo-tag { font-size:11px; font-weight:700; letter-spacing:5px; color:var(--amber); text-transform:uppercase; margin-bottom:8px; }
+.logo h1 { font-family:'Bebas Neue',sans-serif; font-size:clamp(52px,14vw,88px); letter-spacing:6px; color:var(--crease); line-height:0.9; text-shadow:0 0 60px rgba(245,166,35,0.25); }
+.logo h1 span { color:var(--amber); }
+
+.setup-card { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:28px 24px; width:100%; max-width:420px; }
+.setup-card h2 { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:4px; color:var(--dim); margin-bottom:20px; }
+
+.field { margin-bottom:18px; }
+.field label { display:block; font-size:11px; font-weight:700; letter-spacing:3px; color:var(--dim); text-transform:uppercase; margin-bottom:8px; }
+
+.toggle-row { display:flex; gap:8px; }
+.tog { flex:1; padding:10px; border:1px solid var(--border); background:transparent; color:var(--dim); font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:700; letter-spacing:2px; border-radius:3px; cursor:pointer; transition:all 0.2s; text-transform:uppercase; text-align:center; }
+.tog.active { border-color:var(--amber); color:var(--amber); background:rgba(245,166,35,0.08); }
+
+.field input[type=number] {
+  width:100%; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:3px;
+  color:var(--crease); font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:600;
+  padding:10px 14px; outline:none; -moz-appearance:textfield; transition:border-color 0.2s;
+}
+.field input[type=number]::-webkit-outer-spin-button,
+.field input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+.field input[type=number]:focus { border-color:var(--amber); }
+
+.info-box { background:rgba(245,166,35,0.06); border:1px solid rgba(245,166,35,0.2); border-radius:3px; padding:12px 14px; font-size:13px; color:rgba(245,166,35,0.8); line-height:1.5; margin-bottom:20px; }
+
+.btn-primary { width:100%; background:var(--amber); border:none; border-radius:3px; color:#080c08; font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:4px; padding:14px; cursor:pointer; transition:all 0.2s; }
+.btn-primary:hover { background:#f7bc55; }
+.btn-primary:active { transform:scale(0.98); }
+
+/* ══════════════════════════════
+   SCREEN 2 — CAMERA + CALIBRATION
+══════════════════════════════ */
+#screenCamera { background:#000; }
+
+.cam-header {
+  position:absolute; top:0; left:0; right:0; z-index:20;
+  padding:12px 16px; display:flex; justify-content:space-between; align-items:center;
+  background:linear-gradient(to bottom,rgba(0,0,0,0.8),transparent);
+}
+.cam-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:3px; color:var(--amber); }
+.btn-icon { background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:3px; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; letter-spacing:1px; padding:6px 12px; cursor:pointer; }
+
+#videoEl { width:100%; height:100%; object-fit:cover; display:block; }
+#overlayCanvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+
+/* Calibration overlay */
+.calib-bar {
+  position:absolute; bottom:0; left:0; right:0; z-index:30;
+  background:linear-gradient(to top,rgba(0,0,0,0.95) 60%,transparent);
+  padding:20px 20px 32px;
+}
+.calib-step { font-size:11px; font-weight:700; letter-spacing:3px; color:var(--amber); text-transform:uppercase; margin-bottom:6px; }
+.calib-instruction { font-size:16px; font-weight:600; color:var(--crease); margin-bottom:16px; line-height:1.4; }
+.calib-points { display:flex; gap:12px; margin-bottom:16px; }
+.calib-pt { flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:3px; padding:10px; text-align:center; }
+.calib-pt.set { border-color:var(--green); background:rgba(46,204,113,0.08); }
+.calib-pt-label { font-size:10px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; }
+.calib-pt-val { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--dim); margin-top:2px; }
+.calib-pt.set .calib-pt-val { color:var(--green); }
+.btn-calib-done { width:100%; background:var(--green); border:none; border-radius:3px; color:#080c08; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:3px; padding:12px; cursor:pointer; opacity:0.4; pointer-events:none; transition:all 0.2s; }
+.btn-calib-done.ready { opacity:1; pointer-events:auto; }
+
+/* ══════════════════════════════
+   SCREEN 3 — LIVE RECORDING
+══════════════════════════════ */
+#screenRecord { background:#000; }
+
+#recordVideo { width:100%; height:100%; object-fit:cover; display:block; }
+#motionCanvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+#recordOverlay { position:absolute; inset:0; touch-action:none; }
+
+/* Top HUD */
+.rec-hud {
+  position:absolute; top:0; left:0; right:0; z-index:20;
+  padding:12px 16px; display:flex; justify-content:space-between; align-items:center;
+  background:linear-gradient(to bottom,rgba(0,0,0,0.8),transparent);
+}
+.rec-dot { width:8px; height:8px; border-radius:50%; background:var(--red); animation:blink 1s ease infinite; margin-right:8px; display:inline-block; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.rec-label { font-size:12px; font-weight:700; letter-spacing:3px; color:var(--red); text-transform:uppercase; display:flex; align-items:center; }
+.rec-unit-toggle { display:flex; gap:6px; }
+.rec-tog { background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:2px; color:rgba(255,255,255,0.5); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; padding:4px 10px; cursor:pointer; transition:all 0.2s; text-transform:uppercase; }
+.rec-tog.active { border-color:var(--amber); color:var(--amber); }
+
+/* Motion blob overlay */
+.motion-blob { position:absolute; border:2px solid var(--amber); border-radius:50%; pointer-events:none; transform:translate(-50%,-50%); transition:all 0.05s; opacity:0; }
+.motion-blob.visible { opacity:1; }
+
+/* Big tap zone */
+.tap-zone {
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  justify-content:flex-end; align-items:center; padding-bottom:40px;
+}
+.tap-instruction {
+  background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.1);
+  border-radius:4px; padding:12px 20px; text-align:center; margin-bottom:20px;
+}
+.tap-state { font-size:11px; font-weight:700; letter-spacing:4px; color:var(--amber); text-transform:uppercase; margin-bottom:4px; }
+.tap-hint { font-size:15px; font-weight:600; color:var(--crease); }
+
+.big-tap-btn {
+  width:100px; height:100px; border-radius:50%;
+  border:3px solid var(--amber); background:rgba(245,166,35,0.12);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  cursor:pointer; transition:all 0.15s; position:relative; overflow:hidden;
+}
+.big-tap-btn::after {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:rgba(245,166,35,0.3); transform:scale(0); transition:transform 0.3s;
+}
+.big-tap-btn:active::after { transform:scale(1); }
+.big-tap-btn.tapped { border-color:var(--red); background:rgba(231,76,60,0.2); animation:tapFlash 0.3s ease; }
+@keyframes tapFlash { 0%{transform:scale(1)} 50%{transform:scale(0.92)} 100%{transform:scale(1)} }
+.tap-icon { font-size:28px; margin-bottom:2px; }
+.tap-label { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px; color:var(--amber); }
+
+/* Side manual fallback */
+.manual-fallback {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:rgba(0,0,0,0.6); border:1px solid var(--border); border-radius:4px;
+  padding:10px 8px; text-align:center; cursor:pointer; transition:border-color 0.2s;
+}
+.manual-fallback:hover { border-color:var(--dim); }
+.manual-fallback span { font-size:10px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; display:block; line-height:1.4; }
+
+/* ══════════════════════════════
+   SCREEN 4 — RESULT
+══════════════════════════════ */
+#screenResult { justify-content:flex-start; overflow-y:auto; }
+
+.result-video-wrap {
+  position:relative; background:#000; flex-shrink:0;
+  height:45vw; max-height:260px; overflow:hidden;
+}
+#resultVideo { width:100%; height:100%; object-fit:cover; opacity:0.6; }
+.result-overlay-canvas { position:absolute; inset:0; width:100%; height:100%; }
+
+.speed-badge {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  text-align:center; animation:badgeDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes badgeDrop { from{opacity:0;transform:translate(-50%,-60%) scale(0.7)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
+.badge-num { font-family:'Bebas Neue',sans-serif; font-size:clamp(72px,18vw,120px); letter-spacing:-2px; line-height:0.9; }
+.badge-unit { font-family:'Bebas Neue',sans-serif; font-size:clamp(20px,5vw,32px); letter-spacing:4px; opacity:0.7; }
+.badge-cat { font-size:clamp(11px,3vw,14px); font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-top:6px; }
+
+.result-panel { padding:20px; flex:1; }
+
+.result-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+.res-card { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:14px; text-align:center; }
+.res-val { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; color:var(--crease); }
+.res-lbl { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--dim); text-transform:uppercase; margin-top:2px; }
+
+.result-actions { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.btn-secondary { width:100%; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:3px; padding:12px; cursor:pointer; transition:all 0.2s; }
+.btn-secondary:hover { border-color:var(--dim); }
+
+/* History in result screen */
+.hist-section { background:var(--panel); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+.hist-head { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.hist-head h3 { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:3px; color:var(--dim); }
+.hist-clear { font-size:11px; font-weight:700; letter-spacing:2px; color:var(--dim); background:transparent; border:1px solid var(--border); border-radius:2px; padding:3px 8px; cursor:pointer; transition:all 0.2s; text-transform:uppercase; }
+.hist-clear:hover { border-color:var(--red); color:var(--red); }
+.hist-list { max-height:200px; overflow-y:auto; }
+.hist-item { display:grid; grid-template-columns:28px 1fr auto; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid rgba(30,46,30,0.5); }
+.hist-item:last-child { border-bottom:none; }
+.h-num { font-family:'Bebas Neue',sans-serif; font-size:14px; color:var(--dim); }
+.h-cat { font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+.h-spd { font-family:'Bebas Neue',sans-serif; font-size:20px; }
+.c-slow{color:#2ecc71} .c-medium{color:#f5a623} .c-fast{color:#e74c3c} .c-extreme{color:#ff1744}
+
+/* Manual modal */
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; display:flex; align-items:flex-end; justify-content:center; transition:opacity 0.2s; }
+.modal-backdrop.hidden { opacity:0; pointer-events:none; }
+.modal { background:var(--panel); border:1px solid var(--border); border-radius:6px 6px 0 0; padding:28px 24px 40px; width:100%; max-width:480px; animation:slideUp 0.3s ease; }
+@keyframes slideUp { from{transform:translateY(40px)} to{transform:translateY(0)} }
+.modal h3 { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:4px; color:var(--crease); margin-bottom:6px; }
+.modal p { font-size:13px; color:var(--dim); margin-bottom:20px; letter-spacing:1px; }
+.modal-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+.modal-actions { display:flex; gap:10px; }
+.btn-ghost { flex:1; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--dim); font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; letter-spacing:2px; padding:12px; cursor:pointer; text-transform:uppercase; }
+
+/* Toast */
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px); background:var(--panel); border:1px solid var(--amber); border-radius:4px; padding:10px 20px; font-size:13px; font-weight:700; letter-spacing:2px; color:var(--amber); text-transform:uppercase; z-index:600; transition:transform 0.3s; pointer-events:none; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══ SCREEN 1: SETUP ══ -->
+<div class="screen" id="screenSetup">
+  <div class="logo">
+    <div class="logo-tag">Cricket Hybrid</div>
+    <h1>SPEED <span>GUN</span></h1>
+  </div>
+  <div class="setup-card">
+    <h2>Configure</h2>
+
+    <div class="field">
+      <label>Display Units</label>
+      <div class="toggle-row">
+        <div class="tog active" onclick="setUnit('kph',this)">KPH</div>
+        <div class="tog" onclick="setUnit('mph',this)">MPH</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Pitch Distance (metres)</label>
+      <input type="number" id="setupDist" value="20.12" step="0.01" min="1">
+    </div>
+
+    <div class="field">
+      <label>Detection Mode</label>
+      <div class="toggle-row">
+        <div class="tog active" onclick="setMode('hybrid',this)">Hybrid</div>
+        <div class="tog" onclick="setMode('taponly',this)">Tap Only</div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      📷 Point camera side-on to the pitch. You'll tap two calibration points (near &amp; far stumps) before recording.
+    </div>
+
+    <button class="btn-primary" onclick="startCamera()">Open Camera</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: CALIBRATION ══ -->
+<div class="screen hidden" id="screenCamera">
+  <div class="cam-header">
+    <div class="cam-title">Calibrate</div>
+    <button class="btn-icon" onclick="goTo('screenSetup')">✕ Back</button>
+  </div>
+  <video id="videoEl" autoplay playsinline muted></video>
+  <canvas id="overlayCanvas"></canvas>
+
+  <div class="calib-bar">
+    <div class="calib-step" id="calibStep">Step 1 of 2</div>
+    <div class="calib-instruction" id="calibInstruct">Tap on the <strong>near stumps</strong> in the camera view</div>
+    <div class="calib-points">
+      <div class="calib-pt" id="calibPt1">
+        <div class="calib-pt-label">Near Stumps</div>
+        <div class="calib-pt-val" id="calibPt1Val">—</div>
+      </div>
+      <div class="calib-pt" id="calibPt2">
+        <div class="calib-pt-label">Far Stumps</div>
+        <div class="calib-pt-val" id="calibPt2Val">—</div>
+      </div>
+    </div>
+    <button class="btn-calib-done" id="calibDoneBtn" onclick="finishCalibration()">Start Recording →</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: RECORD ══ -->
+<div class="screen hidden" id="screenRecord">
+  <video id="recordVideo" autoplay playsinline muted></video>
+  <canvas id="motionCanvas"></canvas>
+  <div id="recordOverlay">
+
+    <div class="rec-hud">
+      <div class="rec-label"><span class="rec-dot"></span>Live</div>
+      <div class="rec-unit-toggle">
+        <div class="rec-tog active" id="recTog1" onclick="setRecUnit('kph')">KPH</div>
+        <div class="rec-tog" id="recTog2" onclick="setRecUnit('mph')">MPH</div>
+      </div>
+      <button class="btn-icon" onclick="goTo('screenCamera')">◁ Recal</button>
+    </div>
+
+    <div id="motionBlob" class="motion-blob"></div>
+
+    <div class="tap-zone">
+      <div class="tap-instruction">
+        <div class="tap-state" id="tapState">Ready</div>
+        <div class="tap-hint" id="tapHint">Tap when ball leaves the bowler's hand</div>
+      </div>
+      <div class="big-tap-btn" id="tapBtn" onclick="handleTap()">
+        <div class="tap-icon">🏏</div>
+        <div class="tap-label" id="tapBtnLabel">TAP</div>
+      </div>
+    </div>
+
+    <div class="manual-fallback" onclick="openManual()">
+      <span>Manual</span>
+      <span>Entry</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ SCREEN 4: RESULT ══ -->
+<div class="screen hidden" id="screenResult">
+  <div class="result-video-wrap">
+    <canvas id="resultVideoCanvas" class="result-overlay-canvas"></canvas>
+    <div class="speed-badge" id="speedBadge">
+      <div class="badge-num" id="badgeNum">—</div>
+      <div class="badge-unit" id="badgeUnit">KPH</div>
+      <div class="badge-cat" id="badgeCat"></div>
+    </div>
+  </div>
+
+  <div class="result-panel">
+    <div class="result-grid">
+      <div class="res-card">
+        <div class="res-val" id="resKph">—</div>
+        <div class="res-lbl">KPH</div>
+      </div>
+      <div class="res-card">
+        <div class="res-val" id="resMph">—</div>
+        <div class="res-lbl">MPH</div>
+      </div>
+      <div class="res-card">
+        <div class="res-val" id="resTime">—</div>
+        <div class="res-lbl">Time (ms)</div>
+      </div>
+      <div class="res-card">
+        <div class="res-val" id="resDist">—</div>
+        <div class="res-lbl">Distance (m)</div>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-primary" onclick="nextDelivery()">Next Delivery</button>
+      <button class="btn-secondary" onclick="goTo('screenSetup')">New Session</button>
+    </div>
+
+    <div class="hist-section">
+      <div class="hist-head">
+        <h3>Delivery Log</h3>
+        <button class="hist-clear" onclick="clearHistory()">Clear</button>
+      </div>
+      <div class="hist-list" id="histList">
+        <div style="padding:20px;text-align:center;font-size:12px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;">No deliveries yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MANUAL ENTRY MODAL ══ -->
+<div class="modal-backdrop hidden" id="manualModal">
+  <div class="modal">
+    <h3>Manual Entry</h3>
+    <p>Camera detection unavailable — enter the delivery time manually</p>
+    <div class="modal-fields">
+      <div class="field">
+        <label>Minutes</label>
+        <input type="number" id="manMin" placeholder="0" min="0" max="59">
+      </div>
+      <div class="field">
+        <label>Seconds</label>
+        <input type="number" id="manSec" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeManual()">Cancel</button>
+      <button class="btn-primary" style="flex:2" onclick="submitManual()">Calculate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let unit = 'kph';
+let detectionMode = 'hybrid';
+let pitchDistance = 20.12;
+let stream = null;
+let deliveries = [];
+let ballCount = 0;
+
+// Calibration
+let calibPoints = [null, null];
+let calibStep = 0; // 0 = near, 1 = far
+
+// Tap timing
+let tapT1 = null;
+let tapT2 = null;
+let tapPhase = 0; // 0=waiting, 1=ball released, 2=done
+
+// Motion detection
+let motionCtx = null;
+let prevFrame = null;
+let motionRAF = null;
+let lastMotionX = 0, lastMotionY = 0;
+
+// ── Utility ──
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function showToast(msg, duration=2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setUnit(u, el) {
+  unit = u;
+  if (el) {
+    el.closest('.toggle-row').querySelectorAll('.tog').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+}
+
+function setMode(m, el) {
+  detectionMode = m;
+  el.closest('.toggle-row').querySelectorAll('.tog').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setRecUnit(u) {
+  unit = u;
+  document.getElementById('recTog1').classList.toggle('active', u==='kph');
+  document.getElementById('recTog2').classList.toggle('active', u==='mph');
+}
+
+function getCategory(kph) {
+  if (kph < 100) return { label:'Slow', cls:'slow' };
+  if (kph < 120) return { label:'Medium', cls:'medium' };
+  if (kph < 135) return { label:'Fast Medium', cls:'fast' };
+  if (kph < 145) return { label:'Fast', cls:'fast' };
+  return { label:'Express ⚡', cls:'extreme' };
+}
+
+// ── Camera ──
+async function startCamera() {
+  pitchDistance = parseFloat(document.getElementById('setupDist').value) || 20.12;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
+      audio: false
+    });
+    document.getElementById('videoEl').srcObject = stream;
+    document.getElementById('recordVideo').srcObject = stream;
+    setupCalibCanvas();
+    goTo('screenCamera');
+  } catch(e) {
+    showToast('Camera access denied');
+    console.error(e);
+  }
+}
+
+// ── Calibration ──
+function setupCalibCanvas() {
+  const canvas = document.getElementById('overlayCanvas');
+  const video  = document.getElementById('videoEl');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  canvas.addEventListener('pointerdown', onCalibTap);
+}
+
+function onCalibTap(e) {
+  if (calibStep > 1) return;
+  const canvas = document.getElementById('overlayCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  calibPoints[calibStep] = { x, y };
+  drawCalibPoints();
+
+  if (calibStep === 0) {
+    document.getElementById('calibPt1').classList.add('set');
+    document.getElementById('calibPt1Val').textContent = `${Math.round(x)}, ${Math.round(y)}`;
+    document.getElementById('calibStep').textContent = 'Step 2 of 2';
+    document.getElementById('calibInstruct').innerHTML = 'Now tap on the <strong>far stumps</strong>';
+    calibStep = 1;
+  } else {
+    document.getElementById('calibPt2').classList.add('set');
+    document.getElementById('calibPt2Val').textContent = `${Math.round(x)}, ${Math.round(y)}`;
+    document.getElementById('calibDoneBtn').classList.add('ready');
+    calibStep = 2;
+  }
+}
+
+function drawCalibPoints() {
+  const canvas = document.getElementById('overlayCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw guideline between points
+  if (calibPoints[0] && calibPoints[1]) {
+    ctx.beginPath();
+    ctx.moveTo(calibPoints[0].x, calibPoints[0].y);
+    ctx.lineTo(calibPoints[1].x, calibPoints[1].y);
+    ctx.strokeStyle = 'rgba(245,166,35,0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Distance label
+    const mx = (calibPoints[0].x + calibPoints[1].x) / 2;
+    const my = (calibPoints[0].y + calibPoints[1].y) / 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(mx-40, my-14, 80, 22);
+    ctx.fillStyle = '#f5a623';
+    ctx.font = 'bold 13px Rajdhani';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${pitchDistance}m`, mx, my+2);
+  }
+
+  calibPoints.forEach((pt, i) => {
+    if (!pt) return;
+    const color = i === 0 ? '#2ecc71' : '#3498db';
+    const label = i === 0 ? 'Near' : 'Far';
+
+    // Crosshair
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pt.x-14, pt.y); ctx.lineTo(pt.x+14, pt.y);
+    ctx.moveTo(pt.x, pt.y-14); ctx.lineTo(pt.x, pt.y+14);
+    ctx.stroke();
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 18, 0, Math.PI*2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = color + '22';
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = color;
+    ctx.font = 'bold 12px Rajdhani';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, pt.x, pt.y - 24);
+  });
+}
+
+function finishCalibration() {
+  // Compute pixels-per-metre from calibration
+  const dx = calibPoints[1].x - calibPoints[0].x;
+  const dy = calibPoints[1].y - calibPoints[0].y;
+  const pixelDist = Math.sqrt(dx*dx + dy*dy);
+  window.pxPerMetre = pixelDist / pitchDistance;
+
+  resetTap();
+  startMotionDetection();
+  goTo('screenRecord');
+}
+
+// ── Motion Detection ──
+function startMotionDetection() {
+  if (detectionMode !== 'hybrid') return;
+
+  const video  = document.getElementById('recordVideo');
+  const canvas = document.getElementById('motionCanvas');
+  canvas.width  = video.videoWidth  || window.innerWidth;
+  canvas.height = video.videoHeight || window.innerHeight;
+  motionCtx = canvas.getContext('2d');
+  prevFrame = null;
+
+  function detectFrame() {
+    if (!video.readyState || video.readyState < 2) { motionRAF = requestAnimationFrame(detectFrame); return; }
+
+    const W = canvas.width, H = canvas.height;
+    motionCtx.drawImage(video, 0, 0, W, H);
+    const current = motionCtx.getImageData(0, 0, W, H);
+
+    if (prevFrame && tapPhase === 1) {
+      // Frame diff to find moving object
+      let maxDiff = 0, bx = 0, by = 0, count = 0;
+      const step = 4; // sample every 4 pixels for perf
+      for (let y = 0; y < H; y += step) {
+        for (let x = 0; x < W; x += step) {
+          const i = (y * W + x) * 4;
+          const diff = Math.abs(current.data[i] - prevFrame.data[i])
+                     + Math.abs(current.data[i+1] - prevFrame.data[i+1])
+                     + Math.abs(current.data[i+2] - prevFrame.data[i+2]);
+          if (diff > 30) {
+            bx += x; by += y; count++;
+            if (diff > maxDiff) maxDiff = diff;
+          }
+        }
+      }
+
+      if (count > 5) {
+        // Centroid of motion
+        const cx = (bx / count) / W * window.innerWidth;
+        const cy = (by / count) / H * window.innerHeight;
+        lastMotionX = cx;
+        lastMotionY = cy;
+
+        const blob = document.getElementById('motionBlob');
+        blob.style.left = cx + 'px';
+        blob.style.top  = cy + 'px';
+        const sz = Math.max(20, Math.min(60, count));
+        blob.style.width  = sz + 'px';
+        blob.style.height = sz + 'px';
+        blob.classList.add('visible');
+      } else {
+        document.getElementById('motionBlob').classList.remove('visible');
+      }
+    }
+
+    prevFrame = current;
+    motionRAF = requestAnimationFrame(detectFrame);
+  }
+
+  motionRAF = requestAnimationFrame(detectFrame);
+}
+
+function stopMotionDetection() {
+  if (motionRAF) { cancelAnimationFrame(motionRAF); motionRAF = null; }
+}
+
+// ── Tap Logic ──
+function resetTap() {
+  tapT1 = tapT2 = null;
+  tapPhase = 0;
+  document.getElementById('tapState').textContent = 'Ready';
+  document.getElementById('tapHint').textContent = 'Tap when ball leaves the bowler\'s hand';
+  document.getElementById('tapBtnLabel').textContent = 'TAP';
+  document.getElementById('tapBtn').classList.remove('tapped');
+  document.getElementById('motionBlob').classList.remove('visible');
+}
+
+function handleTap() {
+  const btn = document.getElementById('tapBtn');
+  btn.classList.add('tapped');
+  setTimeout(() => btn.classList.remove('tapped'), 300);
+
+  if (tapPhase === 0) {
+    tapT1 = performance.now();
+    tapPhase = 1;
+    document.getElementById('tapState').textContent = 'Timing...';
+    document.getElementById('tapHint').textContent = 'Tap when ball hits the bat or pitch';
+    document.getElementById('tapBtnLabel').textContent = 'HIT!';
+    showToast('⏱ Timing started');
+  } else if (tapPhase === 1) {
+    tapT2 = performance.now();
+    tapPhase = 2;
+    const elapsed = (tapT2 - tapT1) / 1000; // seconds
+    calculateAndShow(elapsed, pitchDistance);
+  }
+}
+
+// ── Calculate Speed ──
+function calculateAndShow(timeSecs, dist) {
+  stopMotionDetection();
+  const mps = dist / timeSecs;
+  const kph = mps * 3.6;
+  const mph = kph * 0.621371;
+  const cat = getCategory(kph);
+
+  ballCount++;
+  deliveries.push({ kph, mph, timeSecs, dist });
+
+  // Populate result screen
+  const displaySpeed = unit === 'kph' ? kph : mph;
+  const badge = document.getElementById('badgeNum');
+  badge.textContent = Math.round(displaySpeed);
+  badge.className = 'badge-num c-' + cat.cls;
+  document.getElementById('badgeUnit').textContent = unit.toUpperCase();
+  document.getElementById('badgeCat').textContent = cat.label;
+  document.getElementById('badgeCat').className = 'badge-cat c-' + cat.cls;
+
+  document.getElementById('resKph').textContent  = Math.round(kph);
+  document.getElementById('resMph').textContent  = Math.round(mph);
+  document.getElementById('resTime').textContent = Math.round(timeSecs * 1000);
+  document.getElementById('resDist').textContent = dist.toFixed(2);
+
+  // Draw overlay on result canvas
+  drawResultCanvas(kph, cat);
+  renderHistory();
+  goTo('screenResult');
+}
+
+function drawResultCanvas(kph, cat) {
+  const canvas = document.getElementById('resultVideoCanvas');
+  const wrap   = canvas.parentElement;
+  canvas.width  = wrap.offsetWidth;
+  canvas.height = wrap.offsetHeight;
+  const ctx = canvas.getContext('2d');
+
+  // Draw calibration line if available
+  if (calibPoints[0] && calibPoints[1]) {
+    const scaleX = canvas.width  / window.innerWidth;
+    const scaleY = canvas.height / window.innerHeight;
+
+    ctx.strokeStyle = 'rgba(245,166,35,0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6,4]);
+    ctx.beginPath();
+    ctx.moveTo(calibPoints[0].x * scaleX, calibPoints[0].y * scaleY);
+    ctx.lineTo(calibPoints[1].x * scaleX, calibPoints[1].y * scaleY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Speed category colour band at bottom
+  const colors = { slow:'#2ecc71', medium:'#f5a623', fast:'#e74c3c', extreme:'#ff1744' };
+  const c = colors[cat.cls] || '#f5a623';
+  const grad = ctx.createLinearGradient(0, canvas.height-60, 0, canvas.height);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(1, c + '44');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// ── History ──
+function renderHistory() {
+  const list = document.getElementById('histList');
+  if (deliveries.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;">No deliveries yet</div>';
+    return;
+  }
+  list.innerHTML = [...deliveries].reverse().map((d, i) => {
+    const num = deliveries.length - i;
+    const cat = getCategory(d.kph);
+    const spd = unit === 'kph' ? d.kph : d.mph;
+    return `<div class="hist-item">
+      <div class="h-num">#${num}</div>
+      <div class="h-cat c-${cat.cls}">${cat.label}</div>
+      <div class="h-spd c-${cat.cls}">${Math.round(spd)} <small style="font-size:11px;opacity:0.6">${unit}</small></div>
+    </div>`;
+  }).join('');
+}
+
+function clearHistory() {
+  deliveries = [];
+  ballCount = 0;
+  renderHistory();
+}
+
+// ── Next delivery ──
+function nextDelivery() {
+  resetTap();
+  startMotionDetection();
+  goTo('screenRecord');
+}
+
+// ── Manual entry ──
+function openManual() {
+  document.getElementById('manualModal').classList.remove('hidden');
+}
+function closeManual() {
+  document.getElementById('manualModal').classList.add('hidden');
+}
+function submitManual() {
+  const mins = parseFloat(document.getElementById('manMin').value) || 0;
+  const secs = parseFloat(document.getElementById('manSec').value) || 0;
+  const total = mins * 60 + secs;
+  if (total <= 0) { showToast('Enter a valid time'); return; }
+  closeManual();
+  calculateAndShow(total, pitchDistance);
+}
+
+// ── Keyboard shortcut (desktop testing) ──
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && document.getElementById('screenRecord').classList.contains('hidden') === false) {
+    e.preventDefault();
+    handleTap();
+  }
+});
+
+// ── Init ──
+goTo('screenSetup');
+</script>
+</body>
+</html>
