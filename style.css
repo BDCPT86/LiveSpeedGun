@@ -397,9 +397,9 @@ input[type=number]:focus { border-color:var(--amber) }
 /* Modal */
 .modal-bg {
   position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:500;
-  display:flex; align-items:flex-end; justify-content:center; transition:opacity .2s;
+  display:flex; align-items:flex-end; justify-content:center;
 }
-.modal-bg.hidden { opacity:0; pointer-events:none }
+.modal-bg.hidden { display:none }
 .modal {
   background:var(--panel); border:1px solid var(--border2);
   border-radius:8px 8px 0 0; padding:28px 22px 42px;

@@ -323,10 +323,14 @@ let newBowlerPhoto = null;
 
 function openAddBowler() {
   newBowlerPhoto = null;
-  document.getElementById('addBowlerName').value      = '';
-  document.getElementById('addBowlerPreview').style.backgroundImage = '';
-  document.getElementById('addBowlerPreview').innerHTML = '<span>+</span>';
+  document.getElementById('addBowlerName').value = '';
+  // Reset type toggle to Fast
+  document.querySelectorAll('.bowler-type-tog').forEach(t => t.classList.remove('on'));
+  const fastTog = document.querySelector('.bowler-type-tog[data-type="fast"]');
+  if (fastTog) fastTog.classList.add('on');
   document.getElementById('addBowlerModal').classList.remove('hidden');
+  // Focus name input after a tick so keyboard appears
+  setTimeout(() => document.getElementById('addBowlerName').focus(), 100);
 }
 
 function closeAddBowler() {

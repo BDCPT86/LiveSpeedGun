@@ -255,75 +255,7 @@
     </div>
   </div>
 
-  <!-- ══ ADD BOWLER MODAL ══ -->
-  <div class="modal-bg hidden" id="addBowlerModal">
-    <div class="modal">
-      <h3>Add Bowler</h3>
-      <p>Create a profile to track stats across sessions</p>
-      <div class="field">
-        <label>Name</label>
-        <input type="text" id="addBowlerName" placeholder="e.g. Dale Steyn" autocomplete="off"
-          style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border2);border-radius:4px;
-          color:var(--crease);font-family:Rajdhani,sans-serif;font-size:17px;padding:10px 14px;outline:none;">
-      </div>
-      <div class="field">
-        <label>Bowling Type</label>
-        <div class="tog-row">
-          <div class="tog bowler-type-tog on" data-type="fast" onclick="pickBowlerType(this)">Fast</div>
-          <div class="tog bowler-type-tog" data-type="medium" onclick="pickBowlerType(this)">Medium</div>
-          <div class="tog bowler-type-tog" data-type="spin" onclick="pickBowlerType(this)">Spin</div>
-        </div>
-      </div>
-      <div class="modal-acts" style="margin-top:20px">
-        <button class="btn-cancel" onclick="closeAddBowler()">Cancel</button>
-        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitAddBowler()">Add Bowler</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ MANUAL ENTRY MODAL ══ -->
-  <div class="modal-bg hidden" id="manModal">
-    <div class="modal">
-      <h3>Manual Entry</h3>
-      <p>Auto-detection unavailable &mdash; enter delivery time</p>
-      <div class="modal-fields">
-        <div class="field"><label>Minutes</label><input type="number" id="manMin" placeholder="0" min="0"></div>
-        <div class="field"><label>Seconds</label><input type="number" id="manSec" placeholder="0.00" min="0" step="0.01"></div>
-      </div>
-      <div class="modal-acts">
-        <button class="btn-cancel" onclick="closeManual()">Cancel</button>
-        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitManual()">Calculate</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ TOAST ══ -->
-  <div class="toast" id="toast"></div>
-
-  <!-- ══ ANDROID / HUAWEI / SAMSUNG INSTALL BANNER ══ -->
-  <div class="install-banner" id="installBanner">
-    <div class="install-icon">&#x1F3CF;</div>
-    <div class="install-text">
-      <strong>Install Speed Gun</strong>
-      <span>Add to home screen for full-screen use &amp; offline access</span>
-    </div>
-    <div class="install-actions">
-      <button class="btn-install" id="btnInstall">Install</button>
-      <button class="btn-install-dismiss" onclick="dismissInstall()">Not now</button>
-    </div>
-  </div>
-
-  <!-- ══ IOS SAFARI NUDGE ══ -->
-  <div class="ios-nudge" id="iosNudge">
-    <div class="ios-nudge-title">Install Speed Gun</div>
-    <div class="ios-nudge-steps">Tap <strong>Share</strong> below, then<br><strong>"Add to Home Screen"</strong></div>
-    <div class="ios-nudge-arrow">&#x2B07;</div>
-    <br><br>
-    <button class="btn-ios-dismiss" onclick="dismissInstall()">Dismiss</button>
-  </div>
-
-
-  <!-- ══ SETTINGS SCREEN ══ -->
+<!-- ══ SETTINGS SCREEN ══ -->
   <div class="screen hidden" id="sSettings">
     <div class="screen-hdr">
       <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
@@ -400,6 +332,74 @@
       </div>
     </div>
   </div>
+
+  <!-- ══ ADD BOWLER MODAL ══ -->
+  <div class="modal-bg hidden" id="addBowlerModal">
+    <div class="modal">
+      <h3>Add Bowler</h3>
+      <p>Create a profile to track stats across sessions</p>
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="addBowlerName" placeholder="e.g. Dale Steyn" autocomplete="off"
+          style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border2);border-radius:4px;
+          color:var(--crease);font-family:Rajdhani,sans-serif;font-size:17px;padding:10px 14px;outline:none;">
+      </div>
+      <div class="field">
+        <label>Bowling Type</label>
+        <div class="tog-row">
+          <div class="tog bowler-type-tog on" data-type="fast" onclick="pickBowlerType(this)">Fast</div>
+          <div class="tog bowler-type-tog" data-type="medium" onclick="pickBowlerType(this)">Medium</div>
+          <div class="tog bowler-type-tog" data-type="spin" onclick="pickBowlerType(this)">Spin</div>
+        </div>
+      </div>
+      <div class="modal-acts" style="margin-top:20px">
+        <button class="btn-cancel" onclick="closeAddBowler()">Cancel</button>
+        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitAddBowler()">Add Bowler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MANUAL ENTRY MODAL ══ -->
+  <div class="modal-bg hidden" id="manModal">
+    <div class="modal">
+      <h3>Manual Entry</h3>
+      <p>Auto-detection unavailable &mdash; enter delivery time</p>
+      <div class="modal-fields">
+        <div class="field"><label>Minutes</label><input type="number" id="manMin" placeholder="0" min="0"></div>
+        <div class="field"><label>Seconds</label><input type="number" id="manSec" placeholder="0.00" min="0" step="0.01"></div>
+      </div>
+      <div class="modal-acts">
+        <button class="btn-cancel" onclick="closeManual()">Cancel</button>
+        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitManual()">Calculate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TOAST ══ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ══ ANDROID / HUAWEI / SAMSUNG INSTALL BANNER ══ -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-icon">&#x1F3CF;</div>
+    <div class="install-text">
+      <strong>Install Speed Gun</strong>
+      <span>Add to home screen for full-screen use &amp; offline access</span>
+    </div>
+    <div class="install-actions">
+      <button class="btn-install" id="btnInstall">Install</button>
+      <button class="btn-install-dismiss" onclick="dismissInstall()">Not now</button>
+    </div>
+  </div>
+
+  <!-- ══ IOS SAFARI NUDGE ══ -->
+  <div class="ios-nudge" id="iosNudge">
+    <div class="ios-nudge-title">Install Speed Gun</div>
+    <div class="ios-nudge-steps">Tap <strong>Share</strong> below, then<br><strong>"Add to Home Screen"</strong></div>
+    <div class="ios-nudge-arrow">&#x2B07;</div>
+    <br><br>
+    <button class="btn-ios-dismiss" onclick="dismissInstall()">Dismiss</button>
+  </div>
+
 
   <!-- ══ SCRIPTS — order matters ══ -->
   <script src="tf-lite.js"></script>
