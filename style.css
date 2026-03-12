@@ -417,8 +417,107 @@ input[type=number]:focus { border-color:var(--amber) }
 }
 
 /* ─────────────────────────────────────
-   PWA INSTALL BANNERS
+   BOWLER CARDS — Bowlers Screen
 ───────────────────────────────────── */
+.bowler-card {
+  display:flex; align-items:center; gap:14px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; padding:14px 16px; margin-bottom:10px;
+  cursor:pointer; transition:all .2s; animation:rowIn .25s ease;
+}
+.bowler-card:hover  { border-color:var(--border2) }
+.bowler-card.active { border-color:var(--amber); background:rgba(240,165,0,.05) }
+
+.bowler-avatar {
+  width:48px; height:48px; border-radius:50%;
+  background:var(--border2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--dim);
+  border:2px solid var(--border);
+}
+.bowler-card-info  { flex:1; min-width:0 }
+.bowler-card-name  { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--crease); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.bowler-card-type  { font-size:10px; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-top:2px }
+.bowler-card-avg   { text-align:right; flex-shrink:0 }
+.bowler-card-avg-val { font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--crease); letter-spacing:1px }
+.bowler-card-avg-lbl { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--dim); text-transform:uppercase }
+
+/* Bowling type colours */
+.type-fast   { color:var(--red)   }
+.type-medium { color:var(--amber) }
+.type-spin   { color:var(--blue)  }
+
+/* ─────────────────────────────────────
+   BOWLER PROFILE SCREEN
+───────────────────────────────────── */
+.profile-header {
+  display:flex; gap:18px; align-items:flex-start; margin-bottom:20px;
+}
+.profile-avatar {
+  width:80px; height:80px; border-radius:50%; flex-shrink:0;
+  background:var(--border2); border:2px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--dim);
+}
+.profile-header-info { flex:1 }
+.profile-name  { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:var(--crease); line-height:1 }
+.profile-type  { font-size:11px; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-top:4px }
+
+.chart-wrap {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; padding:14px; overflow:hidden;
+}
+
+.profile-delivery-row {
+  display:grid; grid-template-columns:26px 1fr auto auto;
+  align-items:center; gap:10px; padding:10px 16px;
+  border-bottom:1px solid rgba(26,37,48,.6);
+}
+.profile-delivery-time { font-size:10px; color:var(--dim); letter-spacing:1px }
+.profile-empty-list    { padding:22px; text-align:center; font-size:11px; letter-spacing:3px; color:var(--dim); text-transform:uppercase }
+
+/* ─────────────────────────────────────
+   ADD BOWLER MODAL
+───────────────────────────────────── */
+.add-bowler-preview {
+  width:72px; height:72px; border-radius:50%; flex-shrink:0;
+  background:var(--border2); border:2px dashed var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; color:var(--dim); cursor:pointer; transition:all .2s;
+}
+.add-bowler-preview:hover { border-color:var(--amber); color:var(--amber) }
+
+/* ─────────────────────────────────────
+   RESULT SCREEN — BOWLER PICKER
+───────────────────────────────────── */
+.bowler-assign-wrap  { margin-bottom:18px }
+.bowler-assign-title {
+  font-size:10px; font-weight:700; letter-spacing:3px;
+  color:var(--dim); text-transform:uppercase; margin-bottom:10px;
+}
+.bowler-picker-scroll {
+  display:flex; gap:10px; overflow-x:auto; padding-bottom:6px;
+}
+.bowler-picker-scroll::-webkit-scrollbar { display:none }
+
+.result-bowler-chip {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  background:var(--panel); border:1px solid var(--border2);
+  border-radius:6px; padding:10px 14px; cursor:pointer;
+  transition:all .2s; flex-shrink:0; min-width:68px;
+}
+.result-bowler-chip:hover    { border-color:var(--amber) }
+.result-bowler-chip.selected { border-color:var(--amber); background:rgba(240,165,0,.08) }
+.result-bowler-chip span     { font-size:11px; font-weight:700; letter-spacing:1px; color:var(--dim); text-transform:uppercase; text-align:center }
+.result-bowler-chip.selected span { color:var(--amber) }
+
+.chip-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--border2); display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:13px; color:var(--dim);
+}
+.no-bowler-hint { font-size:12px; color:var(--dim); letter-spacing:1px }
+.link-span      { color:var(--amber); cursor:pointer; text-decoration:underline }
 .install-banner {
   position:fixed; bottom:0; left:0; right:0; z-index:700;
   background:var(--panel); border-top:1px solid var(--border2);
@@ -467,4 +566,176 @@ input[type=number]:focus { border-color:var(--amber) }
   background:transparent; border:1px solid var(--border2); border-radius:4px;
   color:var(--dim); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700;
   letter-spacing:2px; padding:6px 16px; cursor:pointer; text-transform:uppercase;
+}
+
+/* ─────────────────────────────────────
+   SHARED SCREEN HEADER
+───────────────────────────────────── */
+.screen-hdr {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 16px; flex-shrink:0;
+  background:var(--panel); border-bottom:1px solid var(--border);
+}
+.screen-hdr-title {
+  font-family:'Bebas Neue',sans-serif; font-size:18px;
+  letter-spacing:4px; color:var(--amber);
+}
+.screen-hdr-right { display:flex; gap:8px }
+.btn-danger { border-color:rgba(230,57,70,.4) !important; color:var(--red) !important }
+.btn-danger:hover { border-color:var(--red) !important }
+
+/* ─────────────────────────────────────
+   SCREEN 2 · BOWLERS
+───────────────────────────────────── */
+#sBowlers { background:var(--bg) }
+
+.bowlers-body {
+  flex:1; overflow-y:auto; padding:16px;
+}
+.bowlers-body::-webkit-scrollbar { width:3px }
+.bowlers-body::-webkit-scrollbar-thumb { background:var(--border2) }
+
+.bowler-empty {
+  text-align:center; padding:60px 20px; display:none;
+}
+.bowler-empty-icon  { font-size:48px; margin-bottom:16px; opacity:.4 }
+.bowler-empty-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:4px; color:var(--dim); margin-bottom:8px }
+.bowler-empty-hint  { font-size:13px; color:var(--dim); letter-spacing:.5px; line-height:1.5 }
+
+.bowler-grid { display:flex; flex-direction:column; gap:10px }
+
+.bowler-card {
+  display:flex; align-items:center; gap:14px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:14px 16px; cursor:pointer; transition:all .2s;
+}
+.bowler-card:hover  { border-color:var(--border2) }
+.bowler-card.active { border-color:var(--amber); background:rgba(240,165,0,.05) }
+
+.bowler-avatar {
+  width:48px; height:48px; border-radius:50%;
+  background:var(--border2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; color:var(--text);
+  background-size:cover; background-position:center;
+}
+
+.bowler-card-info { flex:1; min-width:0 }
+.bowler-card-name { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--crease); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.bowler-card-type { font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-top:2px }
+
+.bowler-card-avg     { text-align:right; flex-shrink:0 }
+.bowler-card-avg-val { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--crease) }
+.bowler-card-avg-lbl { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--dim); text-transform:uppercase }
+
+.bowlers-footer {
+  padding:14px 16px 32px; flex-shrink:0;
+  border-top:1px solid var(--border); background:var(--panel);
+}
+.bowlers-footer .btn-go { max-width:100% }
+
+/* Bowling type colours */
+.type-fast   { color:var(--red)   }
+.type-medium { color:var(--amber) }
+.type-spin   { color:var(--blue)  }
+
+/* ─────────────────────────────────────
+   SCREEN 3 · BOWLER PROFILE
+───────────────────────────────────── */
+#sProfile { background:var(--bg) }
+
+.profile-body {
+  flex:1; overflow-y:auto; padding:16px;
+}
+.profile-body::-webkit-scrollbar { width:3px }
+.profile-body::-webkit-scrollbar-thumb { background:var(--border2) }
+
+.profile-hero {
+  display:flex; align-items:center; gap:16px;
+  margin-bottom:20px;
+}
+.profile-avatar {
+  width:72px; height:72px; border-radius:50%;
+  background:var(--border2); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--text);
+  background-size:cover; background-position:center; border:2px solid var(--border2);
+}
+.profile-name { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:var(--crease); line-height:1 }
+.profile-type { font-size:12px; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-top:4px }
+
+.profile-stats {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;
+}
+.profile-stat { background:var(--panel); border:1px solid var(--border); border-radius:5px; padding:12px 8px; text-align:center }
+.profile-stat-val { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--crease) }
+.profile-stat-lbl { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--dim); text-transform:uppercase; margin-top:2px }
+
+.profile-chart-wrap {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; padding:12px; margin-bottom:16px; height:130px;
+}
+.profile-chart { width:100%; height:100%; display:block }
+
+.profile-list-hdr {
+  font-size:10px; font-weight:700; letter-spacing:3px; color:var(--dim);
+  text-transform:uppercase; margin-bottom:8px; padding:0 2px;
+}
+.profile-delivery-list {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; overflow:hidden; margin-bottom:16px;
+}
+.profile-delivery-row {
+  display:grid; grid-template-columns:26px 1fr auto auto;
+  align-items:center; gap:10px; padding:10px 14px;
+  border-bottom:1px solid rgba(26,37,48,.6);
+}
+.profile-delivery-row:last-child { border-bottom:none }
+.profile-delivery-time { font-size:10px; color:var(--dim); letter-spacing:1px }
+.profile-empty-list {
+  padding:22px; text-align:center; font-size:11px;
+  letter-spacing:3px; color:var(--dim); text-transform:uppercase;
+}
+
+/* ─────────────────────────────────────
+   RESULT SCREEN · BOWLER ASSIGNMENT
+───────────────────────────────────── */
+.bowler-assign-wrap {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:6px; padding:14px; margin-bottom:14px;
+}
+.bowler-assign-lbl {
+  font-size:10px; font-weight:700; letter-spacing:3px;
+  color:var(--dim); text-transform:uppercase; margin-bottom:10px;
+}
+.bowler-picker { display:flex; flex-wrap:wrap; gap:8px }
+
+.result-bowler-chip {
+  display:flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,.03); border:1px solid var(--border2);
+  border-radius:24px; padding:6px 12px 6px 6px;
+  cursor:pointer; transition:all .2s;
+}
+.result-bowler-chip:hover    { border-color:var(--amber) }
+.result-bowler-chip.selected { border-color:var(--amber); background:rgba(240,165,0,.08) }
+.result-bowler-chip.selected .chip-avatar { border-color:var(--amber) }
+
+.chip-avatar {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--border2); border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:11px; color:var(--text);
+  background-size:cover; background-position:center; flex-shrink:0;
+}
+.result-bowler-chip span {
+  font-size:13px; font-weight:700; letter-spacing:1px; color:var(--text);
+}
+
+.no-bowler-hint {
+  font-size:13px; color:var(--dim); display:flex; align-items:center; gap:6px;
+}
+.link-btn {
+  background:transparent; border:none; color:var(--amber);
+  font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:700;
+  letter-spacing:1px; cursor:pointer; text-decoration:underline; padding:0;
 }

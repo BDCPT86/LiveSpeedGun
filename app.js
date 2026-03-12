@@ -9,8 +9,9 @@ let unit         = 'kph';
 let pitchDist    = 20.12;
 let motionThresh = 35;
 let stream       = null;
-let tfModel      = null;
 let deliveries   = [];
+
+// ballDetector is the unified TF Lite / TF.js singleton from tf-lite.js
 
 // Calibration
 let calibPts  = [null, null];
@@ -107,26 +108,11 @@ async function initSession() {
   btn.textContent = 'Loading…';
   loader.style.display = 'block';
 
-  // Animate progress bar while TF loads
-  let pct = 0;
-  const pulse = setInterval(() => {
-    pct = Math.min(pct + 2, 88);
-    bar.style.width = pct + '%';
-  }, 80);
-
-  try {
-    lbl.textContent = 'Loading TensorFlow…';
-    await tf.ready();
-    lbl.textContent = 'Loading COCO-SSD model…';
-    tfModel = await cocoSsd.load({ base: 'mobilenet_v2' });
-    clearInterval(pulse);
-    bar.style.width = '100%';
-    lbl.textContent = '✓ Model ready';
-  } catch (e) {
-    clearInterval(pulse);
-    lbl.textContent = '⚠ Model failed — using motion detection only';
-    tfModel = null;
-  }
+  // Load whichever model is available (TF Lite native or TF.js browser)
+  await ballDetector.load((message, pct) => {
+    lbl.textContent    = message;
+    bar.style.width    = pct + '%';
+  });
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -150,7 +136,9 @@ async function initSession() {
       btn.textContent = 'Load & Open Camera';
     }, 800);
 
-    goTo('sCalib');
+    // Go to bowlers first — user picks/adds bowlers then taps Calibrate
+    renderBowlersScreen();
+    goTo('sBowlers');
   } catch (e) {
     toast('Camera access denied', true);
     btn.disabled    = false;
@@ -351,24 +339,23 @@ async function detectionLoop() {
   offCtx.drawImage(video, 0, 0, W, H);
   const frame = offCtx.getImageData(0, 0, W, H);
 
-  // ── Layer 1: TensorFlow COCO-SSD ──
+  // ── Layer 1: Unified ball detector (TF Lite or TF.js) ──
   let tfFound = false;
-  if (tfModel) {
+  if (ballDetector.ready) {
     try {
-      const preds = await tfModel.detect(offCanvas);
-      const ball  = preds.find(p => p.class === 'sports ball' && p.score > 0.45);
-      if (ball) {
+      const result = await ballDetector.detectBall(offCanvas);
+      if (result) {
         tfFound = true;
         const scaleX = window.innerWidth  / W;
         const scaleY = window.innerHeight / H;
-        const cx = (ball.bbox[0] + ball.bbox[2] / 2) * scaleX;
-        const cy = (ball.bbox[1] + ball.bbox[3] / 2) * scaleY;
-        updateTrackRing(cx, cy, ball.bbox[2] * scaleX, ball.bbox[3] * scaleY, 'tf-ring');
-        setDetBadge('tf', 'TF · Sports Ball');
+        const cx = (result.x + result.w / 2) * scaleX;
+        const cy = (result.y + result.h / 2) * scaleY;
+        updateTrackRing(cx, cy, result.w * scaleX, result.h * scaleY, 'tf-ring');
+        setDetBadge('tf', ballDetector.label);
         if (tapPhase === 0) autoTriggerRelease('tf');
         else if (tapPhase === 1) checkImpact(cx, cy);
       }
-    } catch (e) { /* TF errors mid-loop — ignore */ }
+    } catch (e) { /* detection errors mid-loop — ignore */ }
   }
 
   // ── Layer 2: Colour blob ──
@@ -618,6 +605,7 @@ function finishDelivery(timeSec) {
 
   drawResultHero(c);
   renderHistory();
+  renderResultBowlerPicker({ kph, mph, timeSec, dist: pitchDist });
   goTo('sResult');
 }
 
@@ -729,6 +717,35 @@ document.addEventListener('keydown', e => {
     manualTap();
   }
 });
+
+/* ─────────────────────────────────────
+   BOWLER HELPERS (called from HTML)
+───────────────────────────────────── */
+
+// "add one" link on result screen — opens modal, refreshes picker on save
+function openAddBowlerFromResult() {
+  // Monkey-patch submitAddBowler to also refresh the result picker
+  const _orig = window.submitAddBowler;
+  window.submitAddBowler = function () {
+    _orig();
+    window.submitAddBowler = _orig; // restore
+    const last = deliveries[deliveries.length - 1];
+    if (last) renderResultBowlerPicker(last);
+  };
+  openAddBowler();
+}
+
+// Confirm before deleting a bowler profile
+function confirmDeleteBowler() {
+  const id = document.getElementById('sProfile').dataset.bowlerId;
+  const b  = bowlerGetById(id);
+  if (!b) return;
+  if (!confirm(`Delete ${b.name}? All their delivery data will be lost.`)) return;
+  bowlerDelete(id);
+  renderBowlersScreen();
+  goTo('sBowlers');
+  toast(`${b.name} deleted`);
+}
 
 /* ─────────────────────────────────────
    INIT

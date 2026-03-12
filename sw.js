@@ -5,6 +5,8 @@ const PRECACHE = [
   './manifest.json',
   './style.css',
   './app.js',
+  './bowlers.js',
+  './tf-lite.js',
   './pwa.js'
 ];
 
