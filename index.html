@@ -3,13 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cricket Speed Gun</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f0a500">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- iOS Safari -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SpeedGun">
-<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Cricket Speed Gun</title>
+<!-- Huawei / Samsung -->
+<meta name="browsermode" content="application">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
@@ -297,6 +303,49 @@ input[type=number]:focus{border-color:var(--amber)}
   transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.err{border-color:var(--red);color:var(--red)}
+
+/* ── Install Banner ── */
+.install-banner{
+  position:fixed;bottom:0;left:0;right:0;z-index:700;
+  background:var(--panel);border-top:1px solid var(--border2);
+  padding:14px 18px 28px;
+  display:flex;align-items:center;gap:14px;
+  transform:translateY(100%);transition:transform .35s cubic-bezier(.34,1.2,.64,1);
+  box-shadow:0 -8px 32px rgba(0,0,0,.6)}
+.install-banner.show{transform:translateY(0)}
+.install-icon{font-size:32px;flex-shrink:0}
+.install-text{flex:1}
+.install-text strong{display:block;font-family:'Bebas Neue',sans-serif;
+  font-size:17px;letter-spacing:3px;color:var(--crease);margin-bottom:3px}
+.install-text span{font-size:12px;color:var(--dim);letter-spacing:.5px;line-height:1.4}
+.install-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.btn-install{background:var(--amber);border:none;border-radius:4px;
+  color:#07090a;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:3px;
+  padding:8px 16px;cursor:pointer;white-space:nowrap;transition:background .2s}
+.btn-install:hover{background:var(--amber2)}
+.btn-install-dismiss{background:transparent;border:1px solid var(--border2);border-radius:4px;
+  color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:2px;padding:5px 10px;cursor:pointer;text-transform:uppercase;
+  text-align:center;transition:all .2s}
+.btn-install-dismiss:hover{border-color:var(--dim);color:var(--text)}
+
+/* iOS nudge arrow */
+.ios-nudge{
+  position:fixed;bottom:0;left:0;right:0;z-index:700;
+  background:var(--panel);border-top:1px solid var(--border2);
+  padding:16px 20px 36px;text-align:center;
+  transform:translateY(100%);transition:transform .35s cubic-bezier(.34,1.2,.64,1);
+  box-shadow:0 -8px 32px rgba(0,0,0,.6)}
+.ios-nudge.show{transform:translateY(0)}
+.ios-nudge-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;
+  color:var(--crease);margin-bottom:8px}
+.ios-nudge-steps{font-size:14px;color:var(--dim);line-height:1.8;margin-bottom:14px}
+.ios-nudge-steps strong{color:var(--amber)}
+.ios-nudge-arrow{font-size:28px;animation:bounce .8s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(6px)}}
+.btn-ios-dismiss{background:transparent;border:1px solid var(--border2);border-radius:4px;
+  color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:2px;padding:6px 16px;cursor:pointer;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -463,6 +512,31 @@ input[type=number]:focus{border-color:var(--amber)}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Android / Huawei / Samsung install banner -->
+<div class="install-banner" id="installBanner">
+  <div class="install-icon">🏏</div>
+  <div class="install-text">
+    <strong>Install Speed Gun</strong>
+    <span>Add to home screen for full-screen use &amp; offline access</span>
+  </div>
+  <div class="install-actions">
+    <button class="btn-install" id="btnInstall">Install</button>
+    <button class="btn-install-dismiss" onclick="dismissInstall()">Not now</button>
+  </div>
+</div>
+
+<!-- iOS Safari nudge (no JS prompt available) -->
+<div class="ios-nudge" id="iosNudge">
+  <div class="ios-nudge-title">Install Speed Gun</div>
+  <div class="ios-nudge-steps">
+    Tap <strong>Share</strong> below, then<br>
+    <strong>"Add to Home Screen"</strong>
+  </div>
+  <div class="ios-nudge-arrow">⬇</div>
+  <br><br>
+  <button class="btn-ios-dismiss" onclick="dismissInstall()">Dismiss</button>
+</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -1089,12 +1163,87 @@ document.addEventListener('keydown', e=>{
 // Init
 goTo('sSetup');
 </script>
+
+<!-- ── PWA Install Logic ── -->
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
+(function() {
+  // Don't show if already installed (standalone mode)
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+  if (isStandalone) return;
+
+  // Don't show if dismissed recently
+  const dismissed = localStorage.getItem('pwa-dismissed');
+  if (dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+
+  let deferredPrompt = null;
+
+  // Android Chrome + Samsung Internet
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showBanner();
+  });
+
+  // Huawei Browser
+  window.addEventListener('appinstall', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showBanner();
+  });
+
+  document.getElementById('btnInstall').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    hideBanner();
+    if (outcome === 'accepted') {
+      // Small delay then toast
+      setTimeout(() => {
+        const t = document.getElementById('toast');
+        t.textContent = '✓ Installed!';
+        t.className = 'toast show';
+        setTimeout(() => t.classList.remove('show'), 2500);
+      }, 800);
+    }
+  });
+
+  // iOS Safari — detect and show nudge after 3 seconds
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+  if (isIOS && isSafari) {
+    setTimeout(() => {
+      document.getElementById('iosNudge').classList.add('show');
+    }, 3000);
   }
+
+  function showBanner() {
+    setTimeout(() => {
+      document.getElementById('installBanner').classList.add('show');
+    }, 2000); // slight delay so it doesn't fire immediately on load
+  }
+
+  function hideBanner() {
+    document.getElementById('installBanner').classList.remove('show');
+    document.getElementById('iosNudge').classList.remove('show');
+  }
+
+  window.dismissInstall = function() {
+    hideBanner();
+    localStorage.setItem('pwa-dismissed', Date.now().toString());
+  };
+})();
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // SW registration failed silently — app still works
+    });
+  });
+}
 </script>
 </body>
 </html>
