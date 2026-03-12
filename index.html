@@ -68,6 +68,7 @@
   <!-- ══ SCREEN 2 · BOWLERS ══ -->
   <div class="screen hidden" id="sBowlers">
     <div class="screen-hdr">
+      <button class="btn-sm" onclick="goTo('sSettings')">&#x2699; Settings</button>
       <div class="screen-hdr-title">Bowlers</div>
       <div class="screen-hdr-right">
         <button class="btn-sm" onclick="goTo('sCalib')">Calibrate &rarr;</button>
@@ -319,6 +320,85 @@
     <div class="ios-nudge-arrow">&#x2B07;</div>
     <br><br>
     <button class="btn-ios-dismiss" onclick="dismissInstall()">Dismiss</button>
+  </div>
+
+
+  <!-- ══ SETTINGS SCREEN ══ -->
+  <div class="screen hidden" id="sSettings">
+    <div class="screen-hdr">
+      <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
+      <div class="screen-hdr-title">Settings</div>
+      <div></div>
+    </div>
+
+    <div class="settings-body">
+
+      <!-- Import section -->
+      <div class="settings-section">
+        <div class="settings-section-title">Import Bowlers</div>
+        <p class="settings-section-desc">
+          Upload a CSV or JSON file to add multiple bowlers at once.
+        </p>
+        <div class="import-format-wrap">
+          <div class="import-format-card">
+            <div class="import-format-name">CSV</div>
+            <div class="import-format-example">name,type<br>Dale Steyn,fast<br>Graeme Swann,spin</div>
+          </div>
+          <div class="import-format-card">
+            <div class="import-format-name">JSON</div>
+            <div class="import-format-example">[{"name":"Dale Steyn",<br>"type":"fast"}]</div>
+          </div>
+        </div>
+        <!-- Hidden real file input -->
+        <input type="file" id="importFileInput" accept=".csv,.json,text/csv,application/json"
+          style="display:none" onchange="handleImportFile(this)">
+        <button class="btn-go" style="max-width:100%;margin-top:12px"
+          onclick="document.getElementById('importFileInput').click()">
+          &#x1F4C2; Choose File to Import
+        </button>
+      </div>
+
+      <!-- Export section -->
+      <div class="settings-section">
+        <div class="settings-section-title">Export Bowlers</div>
+        <p class="settings-section-desc">
+          Download all bowler profiles and delivery history as JSON. Useful for backups or moving to another device.
+        </p>
+        <button class="btn-ghost" style="width:100%" onclick="exportBowlers()">
+          &#x1F4BE; Export as JSON
+        </button>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="settings-section settings-danger">
+        <div class="settings-section-title">Danger Zone</div>
+        <p class="settings-section-desc">This will permanently delete all bowler profiles and their delivery history.</p>
+        <button class="btn-ghost btn-danger-full" onclick="confirmClearAllBowlers()">
+          &#x1F5D1; Clear All Bowler Data
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ IMPORT CONFLICT MODAL ══ -->
+  <div class="modal-bg hidden" id="importConflictModal">
+    <div class="modal modal-tall">
+      <h3>Conflicts Found</h3>
+      <p id="importConflictDesc">Some bowlers already exist. Choose what to do with each:</p>
+
+      <div class="conflict-actions-global">
+        <button class="btn-sm" onclick="resolveAllConflicts('skip')">Skip All</button>
+        <button class="btn-sm" onclick="resolveAllConflicts('overwrite')">Overwrite All</button>
+      </div>
+
+      <div id="conflictList" class="conflict-list"></div>
+
+      <div class="modal-acts" style="margin-top:16px">
+        <button class="btn-cancel" onclick="cancelImport()">Cancel</button>
+        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="confirmImport()">Import</button>
+      </div>
+    </div>
   </div>
 
   <!-- ══ SCRIPTS — order matters ══ -->

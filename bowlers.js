@@ -403,3 +403,247 @@ function assignDeliveryToBowler(id, el) {
     activeBowlerId = null;
   }
 }
+
+/* ═══════════════════════════════════════
+   IMPORT / EXPORT
+═══════════════════════════════════════ */
+
+/* ─────────────────────────────────────
+   EXPORT — download all bowlers as JSON
+───────────────────────────────────── */
+function exportBowlers() {
+  const bowlers = bowlerGetAll();
+  if (!bowlers.length) { toast('No bowlers to export', true); return; }
+
+  const json = JSON.stringify(bowlers, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `speedgun-bowlers-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${bowlers.length} bowler${bowlers.length > 1 ? 's' : ''} ✓`);
+}
+
+/* ─────────────────────────────────────
+   CLEAR ALL
+───────────────────────────────────── */
+function confirmClearAllBowlers() {
+  const bowlers = bowlerGetAll();
+  if (!bowlers.length) { toast('No bowlers to clear', true); return; }
+  if (!confirm(`Delete all ${bowlers.length} bowler${bowlers.length > 1 ? 's' : ''} and their data? This cannot be undone.`)) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderBowlersScreen();
+  toast('All bowler data cleared');
+}
+
+/* ─────────────────────────────────────
+   IMPORT — file parsing
+───────────────────────────────────── */
+
+// Valid bowling types — anything not in this list defaults to 'fast'
+const VALID_TYPES = new Set(['fast', 'medium', 'spin']);
+
+function normaliseType(raw) {
+  if (!raw) return 'fast';
+  const t = String(raw).trim().toLowerCase();
+  // Accept common aliases
+  if (t === 'pace' || t === 'express') return 'fast';
+  if (t === 'med' || t === 'med-fast' || t === 'medium-fast') return 'medium';
+  if (t === 'offbreak' || t === 'legbreak' || t === 'left-arm spin') return 'spin';
+  return VALID_TYPES.has(t) ? t : 'fast';
+}
+
+function parseCsv(text) {
+  const lines   = text.trim().split(/\r?\n/).filter(l => l.trim());
+  const header  = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/['"]/g, ''));
+  const nameIdx = header.indexOf('name');
+  const typeIdx = header.indexOf('type');
+
+  if (nameIdx === -1) throw new Error('CSV must have a "name" column');
+
+  return lines.slice(1).map(line => {
+    // Handle quoted values
+    const cols = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g) || [];
+    const clean = cols.map(c => c.trim().replace(/^"|"$/g, ''));
+    const name  = clean[nameIdx]?.trim();
+    const type  = normaliseType(clean[typeIdx]);
+    return name ? { name, type } : null;
+  }).filter(Boolean);
+}
+
+function parseJson(text) {
+  const data = JSON.parse(text);
+  if (!Array.isArray(data)) throw new Error('JSON must be an array of bowler objects');
+  return data.map(item => {
+    const name = String(item.name || '').trim();
+    const type = normaliseType(item.type);
+    return name ? { name, type, deliveries: Array.isArray(item.deliveries) ? item.deliveries : [] } : null;
+  }).filter(Boolean);
+}
+
+/* ─────────────────────────────────────
+   IMPORT — state & flow
+───────────────────────────────────── */
+
+// Holds parsed data during the conflict resolution phase
+let _importPending = {
+  clean:     [],   // bowlers with no conflict — add immediately
+  conflicts: []    // { incoming, existing } pairs needing resolution
+};
+
+// Per-conflict resolution choices: { [name]: 'skip' | 'overwrite' }
+let _conflictChoices = {};
+
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  // Reset input so re-selecting the same file fires the event again
+  input.value = '';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text    = e.target.result;
+      const isJson  = file.name.toLowerCase().endsWith('.json');
+      const parsed  = isJson ? parseJson(text) : parseCsv(text);
+
+      if (!parsed.length) { toast('No valid bowlers found in file', true); return; }
+
+      // Split into clean vs conflicts
+      const existing = bowlerGetAll();
+      const existingNames = new Map(existing.map(b => [b.name.toLowerCase(), b]));
+
+      _importPending.clean     = [];
+      _importPending.conflicts = [];
+      _conflictChoices         = {};
+
+      parsed.forEach(incoming => {
+        const match = existingNames.get(incoming.name.toLowerCase());
+        if (match) {
+          _importPending.conflicts.push({ incoming, existing: match });
+          _conflictChoices[incoming.name] = 'skip'; // default
+        } else {
+          _importPending.clean.push(incoming);
+        }
+      });
+
+      if (_importPending.conflicts.length > 0) {
+        showConflictModal(parsed.length);
+      } else {
+        // No conflicts — import directly
+        applyImport();
+      }
+    } catch (err) {
+      toast('File error: ' + err.message, true, 4000);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function showConflictModal(total) {
+  const conflicts = _importPending.conflicts;
+  document.getElementById('importConflictDesc').textContent =
+    `${total} bowler${total > 1 ? 's' : ''} found — ${conflicts.length} name conflict${conflicts.length > 1 ? 's' : ''}. Choose what to do:`;
+
+  document.getElementById('conflictList').innerHTML = conflicts.map(({ incoming, existing }) => {
+    const s = bowlerStats(existing);
+    return `<div class="conflict-row" id="conflict-row-${CSS.escape(incoming.name)}">
+      <div class="conflict-info">
+        <div class="conflict-name">${incoming.name}</div>
+        <div class="conflict-detail">
+          Existing: <span class="type-${existing.type}">${existing.type}</span>
+          ${s.count ? ` · ${s.count} deliveries · avg ${Math.round(s.avg)} kph` : ' · no deliveries'}
+        </div>
+        <div class="conflict-detail">
+          Incoming: <span class="type-${incoming.type}">${incoming.type}</span>
+        </div>
+      </div>
+      <div class="conflict-togs">
+        <div class="tog conflict-tog on" data-name="${incoming.name}" data-action="skip"
+          onclick="setConflictChoice('${incoming.name}','skip',this)">Skip</div>
+        <div class="tog conflict-tog" data-name="${incoming.name}" data-action="overwrite"
+          onclick="setConflictChoice('${incoming.name}','overwrite',this)">Overwrite</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('importConflictModal').classList.remove('hidden');
+}
+
+function setConflictChoice(name, action, el) {
+  _conflictChoices[name] = action;
+  const row = document.getElementById('conflict-row-' + CSS.escape(name));
+  row.querySelectorAll('.conflict-tog').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function resolveAllConflicts(action) {
+  _importPending.conflicts.forEach(({ incoming }) => {
+    _conflictChoices[incoming.name] = action;
+    const row = document.getElementById('conflict-row-' + CSS.escape(incoming.name));
+    if (row) {
+      row.querySelectorAll('.conflict-tog').forEach(t => t.classList.remove('on'));
+      const target = row.querySelector(`[data-action="${action}"]`);
+      if (target) target.classList.add('on');
+    }
+  });
+}
+
+function cancelImport() {
+  _importPending = { clean: [], conflicts: [] };
+  _conflictChoices = {};
+  document.getElementById('importConflictModal').classList.add('hidden');
+}
+
+function confirmImport() {
+  document.getElementById('importConflictModal').classList.add('hidden');
+  applyImport();
+}
+
+function applyImport() {
+  const bowlers     = bowlerGetAll();
+  const nameMap     = new Map(bowlers.map(b => [b.name.toLowerCase(), b]));
+  let added = 0, overwritten = 0, skipped = 0;
+
+  // Add clean (no conflict) bowlers
+  _importPending.clean.forEach(b => {
+    bowlerCreate(b.name, b.type);
+    added++;
+  });
+
+  // Apply conflict choices
+  _importPending.conflicts.forEach(({ incoming }) => {
+    const choice = _conflictChoices[incoming.name] || 'skip';
+    if (choice === 'skip') {
+      skipped++;
+    } else {
+      // Overwrite — update type, preserve existing delivery history
+      const all = bowlerGetAll();
+      const idx = all.findIndex(b => b.name.toLowerCase() === incoming.name.toLowerCase());
+      if (idx !== -1) {
+        all[idx].type = incoming.type;
+        // If incoming has deliveries (from a JSON export roundtrip), merge them
+        if (incoming.deliveries?.length) {
+          all[idx].deliveries = incoming.deliveries;
+        }
+        bowlersSave(all);
+      }
+      overwritten++;
+    }
+  });
+
+  // Summary toast
+  const parts = [];
+  if (added)       parts.push(`${added} added`);
+  if (overwritten) parts.push(`${overwritten} overwritten`);
+  if (skipped)     parts.push(`${skipped} skipped`);
+  toast(parts.join(', ') + ' ✓', false, 3500);
+
+  _importPending    = { clean: [], conflicts: [] };
+  _conflictChoices  = {};
+
+  renderBowlersScreen();
+  goTo('sBowlers');
+}
