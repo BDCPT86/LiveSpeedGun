@@ -1,8 +1,11 @@
 const CACHE = 'speedgun-v1';
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './',
+  './index.html',
+  './manifest.json',
+  './style.css',
+  './app.js',
+  './pwa.js'
 ];
 
 // External CDN resources to cache on first fetch

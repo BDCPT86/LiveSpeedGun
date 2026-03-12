@@ -2,7 +2,7 @@
   "name": "Cricket Speed Gun",
   "short_name": "SpeedGun",
   "description": "Hybrid cricket delivery speed tracker with auto ball detection",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#07090a",

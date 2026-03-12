@@ -83,7 +83,9 @@
 /* ── Service Worker registration ── */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    // Use relative path so it works in GitHub Pages subdirectories
+    // e.g. yourusername.github.io/cricket-speed-gun/
+    navigator.serviceWorker.register('./sw.js').catch(() => {
       // Registration failed silently — app still works without SW
     });
   });
