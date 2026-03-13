@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Cricket Speed Gun</title>
-
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#f0a500">
   <meta name="mobile-web-app-capable" content="yes">
@@ -14,398 +12,335 @@
   <meta name="apple-mobile-web-app-title" content="SpeedGun">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="browsermode" content="application">
-
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <!-- TensorFlow (PWA — TF Lite takes over automatically in Capacitor APK) -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ══ SCREEN 1 · SETUP ══ -->
-  <div class="screen" id="sSetup">
-    <div class="logo">
-      <div class="logo-eyebrow">Cricket · Auto Tracking</div>
-      <h1>SPEED<br><em>GUN</em></h1>
-      <div class="logo-sub">Flagship · Hybrid Detection</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Session Config</div>
-      <div class="field">
-        <label>Display Units</label>
-        <div class="tog-row">
-          <div class="tog on" data-unit="kph" onclick="pickUnit(this)">KPH</div>
-          <div class="tog" data-unit="mph" onclick="pickUnit(this)">MPH</div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Pitch Distance (metres)</label>
-        <input type="number" id="cfgDist" value="20.12" step="0.01" min="1">
-      </div>
-      <div class="field">
-        <label>Motion Sensitivity</label>
-        <div class="tog-row">
-          <div class="tog" data-sens="20" onclick="pickSens(this)">Low</div>
-          <div class="tog on" data-sens="35" onclick="pickSens(this)">Medium</div>
-          <div class="tog" data-sens="55" onclick="pickSens(this)">High</div>
-        </div>
-      </div>
-    </div>
-    <div class="info-pill">
-      🤖 <strong>Auto-tracking chain:</strong> TF Lite / TF.js &rarr; colour blob &rarr; motion spike &rarr; tap fallback.
-    </div>
-    <button class="btn-go" id="btnStart" onclick="initSession()">Load &amp; Open Camera</button>
-    <div class="tf-loader" id="tfLoader">
-      <div class="tf-label" id="tfLbl">Loading AI model&hellip;</div>
-      <div class="tf-bar-wrap"><div class="tf-bar" id="tfBar"></div></div>
-    </div>
+<!-- SCREEN 1 - SETUP -->
+<div class="screen" id="sSetup">
+  <div class="logo">
+    <div class="logo-eyebrow">Cricket · Video Analysis</div>
+    <h1>SPEED<br><em>GUN</em></h1>
+    <div class="logo-sub">Frame-accurate · AI-powered</div>
   </div>
-
-  <!-- ══ SCREEN 2 · BOWLERS ══ -->
-  <div class="screen hidden" id="sBowlers">
-    <div class="screen-hdr">
-      <button class="btn-sm" onclick="goTo('sSettings')">&#x2699; Settings</button>
-      <div class="screen-hdr-title">Bowlers</div>
-      <div class="screen-hdr-right">
-        <button class="btn-sm" onclick="goTo('sCalib')">Calibrate &rarr;</button>
+  <div class="card">
+    <div class="card-title">Session Config</div>
+    <div class="field">
+      <label>Display Units</label>
+      <div class="tog-row">
+        <div class="tog on" data-unit="kph" onclick="pickUnit(this)">KPH</div>
+        <div class="tog" data-unit="mph" onclick="pickUnit(this)">MPH</div>
       </div>
     </div>
-
-    <div class="bowlers-body">
-      <div id="bowlerEmpty" class="bowler-empty">
-        <div class="bowler-empty-icon">&#x1F3CF;</div>
-        <div class="bowler-empty-title">No bowlers yet</div>
-        <div class="bowler-empty-hint">Add a bowler to track their stats across sessions</div>
-      </div>
-      <div id="bowlerGrid" class="bowler-grid"></div>
+    <div class="field">
+      <label>Pitch Distance (metres)</label>
+      <input type="number" id="cfgDist" value="20.12" step="0.01" min="1">
     </div>
-
-    <div class="bowlers-footer">
-      <button class="btn-go" onclick="openAddBowler()">+ Add Bowler</button>
-    </div>
-  </div>
-
-  <!-- ══ SCREEN 3 · BOWLER PROFILE ══ -->
-  <div class="screen hidden" id="sProfile">
-    <div class="screen-hdr">
-      <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
-      <div class="screen-hdr-title">Profile</div>
-      <button class="btn-sm btn-danger" onclick="confirmDeleteBowler()">Delete</button>
-    </div>
-
-    <div class="profile-body">
-      <!-- Avatar + name -->
-      <div class="profile-hero">
-        <div class="profile-avatar" id="profileAvatar"></div>
-        <div class="profile-hero-info">
-          <div class="profile-name" id="profileName"></div>
-          <div class="profile-type" id="profileType"></div>
-        </div>
-      </div>
-
-      <!-- Stats row -->
-      <div class="profile-stats">
-        <div class="profile-stat">
-          <div class="profile-stat-val" id="profileAvg">&#x2014;</div>
-          <div class="profile-stat-lbl">Avg KPH</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val" id="profileMax">&#x2014;</div>
-          <div class="profile-stat-lbl">Max KPH</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val" id="profileMin">&#x2014;</div>
-          <div class="profile-stat-lbl">Min KPH</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val" id="profileCount">&#x2014;</div>
-          <div class="profile-stat-lbl">Deliveries</div>
-        </div>
-      </div>
-
-      <!-- Bar chart -->
-      <div class="profile-chart-wrap">
-        <canvas id="deliveryChart" class="profile-chart"></canvas>
-      </div>
-
-      <!-- Delivery list -->
-      <div class="profile-list-hdr">
-        <span>Recent Deliveries</span>
-      </div>
-      <div id="profileDeliveryList" class="profile-delivery-list"></div>
-    </div>
-  </div>
-
-  <!-- ══ SCREEN 4 · CALIBRATE ══ -->
-  <div class="screen hidden" id="sCalib">
-    <video id="calibVideo" autoplay playsinline muted></video>
-    <canvas id="calibCanvas"></canvas>
-    <div class="cam-bar">
-      <div class="cam-title">Calibrate Pitch</div>
-      <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
-    </div>
-    <div class="calib-tray">
-      <div class="calib-step" id="calibStepLbl">Step 1 of 3</div>
-      <div class="calib-instr" id="calibInstr">Tap the <strong>near stumps</strong> in the camera view</div>
-      <div class="calib-pts">
-        <div class="calib-pt" id="cpt1">
-          <div class="calib-pt-lbl">Near Stumps</div>
-          <div class="calib-pt-val" id="cptv1">&#x2014;</div>
-        </div>
-        <div class="calib-pt" id="cpt2">
-          <div class="calib-pt-lbl">Far Stumps</div>
-          <div class="calib-pt-val" id="cptv2">&#x2014;</div>
-        </div>
-      </div>
-      <div class="ball-sampler">
-        <div class="ball-sampler-title">Ball Colour</div>
-        <div class="ball-sampler-row">
-          <div class="ball-swatch ball-swatch-red selected" onclick="selectBallColour('red',this)" title="Red ball"></div>
-          <div class="ball-swatch ball-swatch-white" onclick="selectBallColour('white',this)" title="White ball"></div>
-          <div class="ball-swatch ball-swatch-custom" onclick="sampleCustomColour(this)" title="Sample from camera">&#x1F3AF;</div>
-          <div class="ball-sampler-hint" id="ballColourHint">Red ball selected</div>
-        </div>
-      </div>
-      <button class="btn-calib-go" id="calibGoBtn" onclick="finishCalib()">Start Auto-Tracking &rarr;</button>
-    </div>
-  </div>
-
-  <!-- ══ SCREEN 5 · RECORD ══ -->
-  <div class="screen hidden" id="sRecord">
-    <video id="recVideo" autoplay playsinline muted></video>
-    <canvas id="recCanvas"></canvas>
-    <div id="recHitZone"></div>
-    <div class="rec-hud">
-      <div class="rec-live">
-        <span class="rec-dot"></span>
-        <span class="rec-live-txt">Live</span>
-      </div>
-      <div class="hud-right">
-        <button class="btn-sm" onclick="toggleUnit()">KPH/MPH</button>
-        <button class="btn-sm" onclick="goTo('sCalib')">&#x25C1; Recal</button>
-      </div>
-    </div>
-    <div class="det-badge" id="detBadge">Initialising&hellip;</div>
-    <div class="track-ring" id="trackRing"></div>
-    <div class="state-panel">
-      <div class="state-label" id="stateLbl">Ready</div>
-      <div class="state-hint" id="stateHint">Auto-detection watching for delivery&hellip;</div>
-      <div class="tap-ring-wrap">
-        <div class="tap-pulse"></div>
-        <div class="tap-btn" id="tapBtn" onclick="manualTap()">
-          <div class="tap-icon-big">&#x1F3CF;</div>
-          <div class="tap-lbl" id="tapBtnLbl">TAP</div>
-        </div>
-      </div>
-      <div class="auto-ind" id="autoInd">&#x26A1; Auto-detected</div>
-    </div>
-    <div class="manual-btn" onclick="openManual()">
-      <span>Manual</span><span>Entry</span>
-    </div>
-  </div>
-
-  <!-- ══ SCREEN 6 · RESULT ══ -->
-  <div class="screen hidden" id="sResult">
-    <div class="result-hero">
-      <canvas id="resultCanvas"></canvas>
-      <div class="speed-stamp" id="speedStamp">
-        <div class="stamp-num" id="stampNum">&#x2014;</div>
-        <div class="stamp-unit" id="stampUnit">KPH</div>
-        <div class="stamp-cat" id="stampCat"></div>
-      </div>
-    </div>
-    <div class="result-body">
-      <div class="stat-row">
-        <div class="stat-box"><div class="stat-v" id="rKph">&#x2014;</div><div class="stat-l">KPH</div></div>
-        <div class="stat-box"><div class="stat-v" id="rMph">&#x2014;</div><div class="stat-l">MPH</div></div>
-        <div class="stat-box"><div class="stat-v" id="rMs">&#x2014;</div><div class="stat-l">MS</div></div>
-        <div class="stat-box"><div class="stat-v" id="rDist">&#x2014;</div><div class="stat-l">M</div></div>
-      </div>
-
-      <!-- Bowler assignment -->
-      <div class="bowler-assign-wrap">
-        <div class="bowler-assign-lbl">Assign to bowler</div>
-        <div id="bowlerPicker" class="bowler-picker"></div>
-        <div id="noBowlerHint" class="no-bowler-hint" style="display:none">
-          <span>No bowlers added yet &mdash;</span>
-          <button class="link-btn" onclick="openAddBowlerFromResult()">add one</button>
-        </div>
-      </div>
-
-      <div class="act-col">
-        <button class="btn-next" onclick="nextDelivery()">Next Delivery</button>
-        <button class="btn-ghost" onclick="goTo('sBowlers')">View Bowlers</button>
-        <button class="btn-ghost" onclick="goTo('sSetup')">New Session</button>
-      </div>
-
-      <!-- Session log -->
-      <div class="hist-wrap">
-        <div class="hist-hdr">
-          <h3>Session Log</h3>
-          <button class="hist-clr" onclick="clearHistory()">Clear</button>
-        </div>
-        <div class="hist-scroll" id="histList">
-          <div style="padding:22px;text-align:center;font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase">No deliveries yet</div>
-        </div>
+    <div class="field">
+      <label>Video Frame Rate</label>
+      <div class="tog-row">
+        <div class="tog" data-fps="30" onclick="pickFps(this)">30fps</div>
+        <div class="tog on" data-fps="60" onclick="pickFps(this)">60fps</div>
+        <div class="tog" data-fps="120" onclick="pickFps(this)">120fps</div>
+        <div class="tog" data-fps="240" onclick="pickFps(this)">240fps</div>
       </div>
     </div>
   </div>
-
-<!-- ══ SETTINGS SCREEN ══ -->
-  <div class="screen hidden" id="sSettings">
-    <div class="screen-hdr">
-      <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
-      <div class="screen-hdr-title">Settings</div>
-      <div></div>
-    </div>
-
-    <div class="settings-body">
-
-      <!-- Import section -->
-      <div class="settings-section">
-        <div class="settings-section-title">Import Bowlers</div>
-        <p class="settings-section-desc">
-          Upload a CSV or JSON file to add multiple bowlers at once.
-        </p>
-        <div class="import-format-wrap">
-          <div class="import-format-card">
-            <div class="import-format-name">CSV</div>
-            <div class="import-format-example">name,type<br>Dale Steyn,fast<br>Graeme Swann,spin</div>
-          </div>
-          <div class="import-format-card">
-            <div class="import-format-name">JSON</div>
-            <div class="import-format-example">[{"name":"Dale Steyn",<br>"type":"fast"}]</div>
-          </div>
-        </div>
-        <!-- Hidden real file input -->
-        <input type="file" id="importFileInput" accept=".csv,.json,text/csv,application/json"
-          style="display:none" onchange="handleImportFile(this)">
-        <button class="btn-go" style="max-width:100%;margin-top:12px"
-          onclick="document.getElementById('importFileInput').click()">
-          &#x1F4C2; Choose File to Import
-        </button>
-      </div>
-
-      <!-- Export section -->
-      <div class="settings-section">
-        <div class="settings-section-title">Export Bowlers</div>
-        <p class="settings-section-desc">
-          Download all bowler profiles and delivery history as JSON. Useful for backups or moving to another device.
-        </p>
-        <button class="btn-ghost" style="width:100%" onclick="exportBowlers()">
-          &#x1F4BE; Export as JSON
-        </button>
-      </div>
-
-      <!-- Danger zone -->
-      <div class="settings-section settings-danger">
-        <div class="settings-section-title">Danger Zone</div>
-        <p class="settings-section-desc">This will permanently delete all bowler profiles and their delivery history.</p>
-        <button class="btn-ghost btn-danger-full" onclick="confirmClearAllBowlers()">
-          &#x1F5D1; Clear All Bowler Data
-        </button>
-      </div>
-
-    </div>
+  <div class="info-pill">
+    Record a delivery at high frame rate, or upload from your camera roll. AI will locate the release and impact frames automatically.
   </div>
+  <button class="btn-go" onclick="startSetup()">Continue</button>
+</div>
 
-  <!-- ══ IMPORT CONFLICT MODAL ══ -->
-  <div class="modal-bg hidden" id="importConflictModal">
-    <div class="modal modal-tall">
-      <h3>Conflicts Found</h3>
-      <p id="importConflictDesc">Some bowlers already exist. Choose what to do with each:</p>
+<!-- SCREEN 2 - BOWLERS -->
+<div class="screen hidden" id="sBowlers">
+  <div class="screen-hdr">
+    <button class="btn-sm" onclick="goTo('sSettings')">&#x2699; Settings</button>
+    <div class="screen-hdr-title">Bowlers</div>
+    <button class="btn-sm" onclick="goTo('sVideo')">Record &rarr;</button>
+  </div>
+  <div class="bowlers-body">
+    <div id="bowlerEmpty" class="bowler-empty">
+      <div class="bowler-empty-icon">&#x1F3CF;</div>
+      <div class="bowler-empty-title">No bowlers yet</div>
+      <div class="bowler-empty-hint">Add bowlers to track stats, or skip straight to recording</div>
+    </div>
+    <div id="bowlerGrid" class="bowler-grid"></div>
+  </div>
+  <div class="bowlers-footer">
+    <button class="btn-go" onclick="openAddBowler()">+ Add Bowler</button>
+  </div>
+</div>
 
-      <div class="conflict-actions-global">
-        <button class="btn-sm" onclick="resolveAllConflicts('skip')">Skip All</button>
-        <button class="btn-sm" onclick="resolveAllConflicts('overwrite')">Overwrite All</button>
-      </div>
-
-      <div id="conflictList" class="conflict-list"></div>
-
-      <div class="modal-acts" style="margin-top:16px">
-        <button class="btn-cancel" onclick="cancelImport()">Cancel</button>
-        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="confirmImport()">Import</button>
+<!-- SCREEN 3 - BOWLER PROFILE -->
+<div class="screen hidden" id="sProfile">
+  <div class="screen-hdr">
+    <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
+    <div class="screen-hdr-title">Profile</div>
+    <button class="btn-sm btn-danger" onclick="confirmDeleteBowler()">Delete</button>
+  </div>
+  <div class="profile-body">
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profileAvatar"></div>
+      <div class="profile-hero-info">
+        <div class="profile-name" id="profileName"></div>
+        <div class="profile-type" id="profileType"></div>
       </div>
     </div>
+    <div class="profile-stats">
+      <div class="profile-stat"><div class="profile-stat-val" id="profileAvg">&#x2014;</div><div class="profile-stat-lbl">Avg KPH</div></div>
+      <div class="profile-stat"><div class="profile-stat-val" id="profileMax">&#x2014;</div><div class="profile-stat-lbl">Max KPH</div></div>
+      <div class="profile-stat"><div class="profile-stat-val" id="profileMin">&#x2014;</div><div class="profile-stat-lbl">Min KPH</div></div>
+      <div class="profile-stat"><div class="profile-stat-val" id="profileCount">&#x2014;</div><div class="profile-stat-lbl">Deliveries</div></div>
+    </div>
+    <div class="profile-chart-wrap">
+      <canvas id="deliveryChart" class="profile-chart"></canvas>
+    </div>
+    <div class="profile-list-hdr"><span>Recent Deliveries</span></div>
+    <div id="profileDeliveryList" class="profile-delivery-list"></div>
   </div>
+</div>
 
-  <!-- ══ ADD BOWLER MODAL ══ -->
-  <div class="modal-bg hidden" id="addBowlerModal">
-    <div class="modal">
-      <h3>Add Bowler</h3>
-      <p>Create a profile to track stats across sessions</p>
-      <div class="field">
-        <label>Name</label>
-        <input type="text" id="addBowlerName" placeholder="e.g. Dale Steyn" autocomplete="off"
-          style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border2);border-radius:4px;
-          color:var(--crease);font-family:Rajdhani,sans-serif;font-size:17px;padding:10px 14px;outline:none;">
+<!-- SCREEN 4 - VIDEO: record or upload -->
+<div class="screen hidden" id="sVideo">
+  <div class="screen-hdr">
+    <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
+    <div class="screen-hdr-title">Video</div>
+    <div></div>
+  </div>
+  <div class="video-tabs">
+    <div class="video-tab active" id="tabRecord" onclick="switchVideoTab('record')">&#x23FA; Record</div>
+    <div class="video-tab" id="tabUpload" onclick="switchVideoTab('upload')">&#x1F4C2; Upload</div>
+  </div>
+  <!-- Record pane -->
+  <div id="paneRecord" class="video-pane">
+    <div class="rec-preview-wrap">
+      <video id="recPreview" autoplay playsinline muted class="rec-preview"></video>
+      <div class="rec-overlay hidden" id="recOverlay">
+        <div class="rec-indicator"><span class="rec-dot-big"></span><span id="recTimer">0:00</span></div>
       </div>
-      <div class="field">
-        <label>Bowling Type</label>
-        <div class="tog-row">
-          <div class="tog bowler-type-tog on" data-type="fast" onclick="pickBowlerType(this)">Fast</div>
-          <div class="tog bowler-type-tog" data-type="medium" onclick="pickBowlerType(this)">Medium</div>
-          <div class="tog bowler-type-tog" data-type="spin" onclick="pickBowlerType(this)">Spin</div>
-        </div>
-      </div>
-      <div class="modal-acts" style="margin-top:20px">
-        <button class="btn-cancel" onclick="closeAddBowler()">Cancel</button>
-        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitAddBowler()">Add Bowler</button>
+    </div>
+    <div class="rec-controls">
+      <div class="rec-hint" id="recHint">Side-on camera &bull; Both sets of stumps visible</div>
+      <div class="rec-btn-row">
+        <button class="btn-rec" id="btnCamOpen" onclick="openCamera()">&#x1F4F7; Open Camera</button>
+        <button class="btn-rec hidden" id="btnRecStart" onclick="startRecording()">&#x23FA; Record</button>
+        <button class="btn-rec btn-rec-stop hidden" id="btnRecStop" onclick="stopRecording()">&#x23F9; Stop</button>
       </div>
     </div>
   </div>
+  <!-- Upload pane -->
+  <div id="paneUpload" class="video-pane hidden">
+    <div class="upload-drop" onclick="document.getElementById('uploadFileInput').click()">
+      <div class="upload-drop-icon">&#x1F3AC;</div>
+      <div class="upload-drop-title">Tap to choose video</div>
+      <div class="upload-drop-hint">MP4 &bull; MOV &bull; Any device video</div>
+    </div>
+    <input type="file" id="uploadFileInput" accept="video/*" style="display:none" onchange="handleVideoUpload(this)">
+  </div>
+</div>
 
-  <!-- ══ MANUAL ENTRY MODAL ══ -->
-  <div class="modal-bg hidden" id="manModal">
-    <div class="modal">
-      <h3>Manual Entry</h3>
-      <p>Auto-detection unavailable &mdash; enter delivery time</p>
-      <div class="modal-fields">
-        <div class="field"><label>Minutes</label><input type="number" id="manMin" placeholder="0" min="0"></div>
-        <div class="field"><label>Seconds</label><input type="number" id="manSec" placeholder="0.00" min="0" step="0.01"></div>
+<!-- SCREEN 5 - CALIBRATE on first frame -->
+<div class="screen hidden" id="sCalib">
+  <div class="screen-hdr">
+    <button class="btn-sm" onclick="goTo('sVideo')">&#x25C1; Back</button>
+    <div class="screen-hdr-title">Calibrate</div>
+    <button class="btn-sm btn-amber" id="btnCalibDone" onclick="finishCalib()" style="opacity:.35;pointer-events:none">Done &#x2713;</button>
+  </div>
+  <div class="calib-video-wrap">
+    <canvas id="calibCanvas" class="calib-canvas"></canvas>
+  </div>
+  <div class="calib-tray">
+    <div class="calib-step" id="calibStepLbl">Step 1 of 2</div>
+    <div class="calib-instr" id="calibInstr">Tap the <strong>near stumps</strong> (bowling end)</div>
+    <div class="calib-pts">
+      <div class="calib-pt" id="cpt1"><div class="calib-pt-lbl">Near Stumps</div><div class="calib-pt-val" id="cptv1">&#x2014;</div></div>
+      <div class="calib-pt" id="cpt2"><div class="calib-pt-lbl">Far Stumps</div><div class="calib-pt-val" id="cptv2">&#x2014;</div></div>
+    </div>
+    <div class="calib-reset-row">
+      <button class="btn-sm" onclick="resetCalib()">&#x21BA; Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 6 - ANALYSE -->
+<div class="screen hidden" id="sAnalyse">
+  <div class="screen-hdr">
+    <div></div>
+    <div class="screen-hdr-title">Analysing</div>
+    <div></div>
+  </div>
+  <div class="analyse-body">
+    <div class="analyse-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ball">&#x1F3CF;</div>
+    </div>
+    <div class="analyse-stage" id="analyseStage">Extracting frames&hellip;</div>
+    <div class="analyse-detail" id="analyseDetail">&nbsp;</div>
+    <div class="analyse-bar-wrap"><div class="analyse-bar" id="analyseBar"></div></div>
+  </div>
+</div>
+
+<!-- SCREEN 7 - REVIEW -->
+<div class="screen hidden" id="sReview">
+  <div class="screen-hdr">
+    <button class="btn-sm" onclick="goTo('sVideo')">&#x25C1; Redo</button>
+    <div class="screen-hdr-title">Review</div>
+    <button class="btn-sm btn-amber" onclick="confirmFrames()">Confirm &#x2713;</button>
+  </div>
+  <div class="review-preview-wrap">
+    <canvas id="reviewCanvas" class="review-canvas"></canvas>
+    <div class="review-frame-badge" id="reviewFrameBadge">Frame 0</div>
+  </div>
+  <div class="review-assign-row">
+    <button class="btn-assign release-btn" id="btnAssignRelease" onclick="assignFrame('release')">&#x1F7E2; Set as Release</button>
+    <button class="btn-assign impact-btn" id="btnAssignImpact" onclick="assignFrame('impact')">&#x1F534; Set as Impact</button>
+  </div>
+  <div class="review-ai-summary" id="reviewAiSummary"></div>
+  <div class="thumb-strip-wrap">
+    <div class="thumb-legend-row">
+      <span class="thumb-legend release-legend">&#x25CF; Release</span>
+      <span class="thumb-legend impact-legend">&#x25CF; Impact</span>
+      <span class="thumb-strip-hint">Tap to preview &bull; assign above</span>
+    </div>
+    <div class="thumb-strip" id="thumbStrip"></div>
+  </div>
+</div>
+
+<!-- SCREEN 8 - RESULT -->
+<div class="screen hidden" id="sResult">
+  <div class="result-hero">
+    <canvas id="resultCanvas"></canvas>
+    <div class="speed-stamp">
+      <div class="stamp-num" id="stampNum">&#x2014;</div>
+      <div class="stamp-unit" id="stampUnit">KPH</div>
+      <div class="stamp-cat" id="stampCat"></div>
+    </div>
+  </div>
+  <div class="result-body">
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-v" id="rKph">&#x2014;</div><div class="stat-l">KPH</div></div>
+      <div class="stat-box"><div class="stat-v" id="rMph">&#x2014;</div><div class="stat-l">MPH</div></div>
+      <div class="stat-box"><div class="stat-v" id="rFrames">&#x2014;</div><div class="stat-l">Frames</div></div>
+      <div class="stat-box"><div class="stat-v" id="rFps">&#x2014;</div><div class="stat-l">FPS</div></div>
+    </div>
+    <div class="bowler-assign-wrap">
+      <div class="bowler-assign-lbl">Assign to bowler</div>
+      <div id="bowlerPicker" class="bowler-picker"></div>
+      <div id="noBowlerHint" class="no-bowler-hint" style="display:none">
+        <span>No bowlers yet &mdash;</span>
+        <button class="link-btn" onclick="openAddBowlerFromResult()">add one</button>
       </div>
-      <div class="modal-acts">
-        <button class="btn-cancel" onclick="closeManual()">Cancel</button>
-        <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitManual()">Calculate</button>
+    </div>
+    <div class="act-col">
+      <button class="btn-next" onclick="goTo('sVideo')">Analyse Another</button>
+      <button class="btn-ghost" onclick="goTo('sBowlers'); renderBowlersScreen()">View Bowlers</button>
+      <button class="btn-ghost" onclick="goTo('sSetup')">New Session</button>
+    </div>
+    <div class="hist-wrap">
+      <div class="hist-hdr"><h3>Session Log</h3><button class="hist-clr" onclick="clearHistory()">Clear</button></div>
+      <div class="hist-scroll" id="histList">
+        <div style="padding:22px;text-align:center;font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase">No deliveries yet</div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ══ TOAST ══ -->
-  <div class="toast" id="toast"></div>
-
-  <!-- ══ ANDROID / HUAWEI / SAMSUNG INSTALL BANNER ══ -->
-  <div class="install-banner" id="installBanner">
-    <div class="install-icon">&#x1F3CF;</div>
-    <div class="install-text">
-      <strong>Install Speed Gun</strong>
-      <span>Add to home screen for full-screen use &amp; offline access</span>
+<!-- SETTINGS SCREEN -->
+<div class="screen hidden" id="sSettings">
+  <div class="screen-hdr">
+    <button class="btn-sm" onclick="goTo('sBowlers')">&#x25C1; Back</button>
+    <div class="screen-hdr-title">Settings</div>
+    <div></div>
+  </div>
+  <div class="settings-body">
+    <div class="settings-section">
+      <div class="settings-section-title">Import Bowlers</div>
+      <p class="settings-section-desc">Upload a CSV or JSON file to add multiple bowlers at once.</p>
+      <div class="import-format-wrap">
+        <div class="import-format-card"><div class="import-format-name">CSV</div><div class="import-format-example">name,type<br>Dale Steyn,fast<br>Graeme Swann,spin</div></div>
+        <div class="import-format-card"><div class="import-format-name">JSON</div><div class="import-format-example">[{"name":"Dale Steyn",<br>"type":"fast"}]</div></div>
+      </div>
+      <input type="file" id="importFileInput" accept=".csv,.json,text/csv,application/json" style="display:none" onchange="handleImportFile(this)">
+      <button class="btn-go" style="max-width:100%;margin-top:12px" onclick="document.getElementById('importFileInput').click()">&#x1F4C2; Choose File to Import</button>
     </div>
-    <div class="install-actions">
-      <button class="btn-install" id="btnInstall">Install</button>
-      <button class="btn-install-dismiss" onclick="dismissInstall()">Not now</button>
+    <div class="settings-section">
+      <div class="settings-section-title">Export Bowlers</div>
+      <p class="settings-section-desc">Download all profiles and delivery history as JSON.</p>
+      <button class="btn-ghost" style="width:100%" onclick="exportBowlers()">&#x1F4BE; Export as JSON</button>
+    </div>
+    <div class="settings-section settings-danger">
+      <div class="settings-section-title">Danger Zone</div>
+      <p class="settings-section-desc">Permanently delete all bowler profiles and delivery history.</p>
+      <button class="btn-ghost btn-danger-full" onclick="confirmClearAllBowlers()">&#x1F5D1; Clear All Bowler Data</button>
     </div>
   </div>
+</div>
 
-  <!-- ══ IOS SAFARI NUDGE ══ -->
-  <div class="ios-nudge" id="iosNudge">
-    <div class="ios-nudge-title">Install Speed Gun</div>
-    <div class="ios-nudge-steps">Tap <strong>Share</strong> below, then<br><strong>"Add to Home Screen"</strong></div>
-    <div class="ios-nudge-arrow">&#x2B07;</div>
-    <br><br>
-    <button class="btn-ios-dismiss" onclick="dismissInstall()">Dismiss</button>
+<!-- MODALS -->
+<div class="modal-bg hidden" id="addBowlerModal">
+  <div class="modal">
+    <h3>Add Bowler</h3>
+    <p>Create a profile to track stats across sessions</p>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="addBowlerName" placeholder="e.g. Dale Steyn" autocomplete="off" class="text-input">
+    </div>
+    <div class="field">
+      <label>Bowling Type</label>
+      <div class="tog-row">
+        <div class="tog bowler-type-tog on" data-type="fast" onclick="pickBowlerType(this)">Fast</div>
+        <div class="tog bowler-type-tog" data-type="medium" onclick="pickBowlerType(this)">Medium</div>
+        <div class="tog bowler-type-tog" data-type="spin" onclick="pickBowlerType(this)">Spin</div>
+      </div>
+    </div>
+    <div class="modal-acts" style="margin-top:20px">
+      <button class="btn-cancel" onclick="closeAddBowler()">Cancel</button>
+      <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="submitAddBowler()">Add</button>
+    </div>
   </div>
+</div>
 
+<div class="modal-bg hidden" id="importConflictModal">
+  <div class="modal modal-tall">
+    <h3>Conflicts Found</h3>
+    <p id="importConflictDesc"></p>
+    <div class="conflict-actions-global">
+      <button class="btn-sm" onclick="resolveAllConflicts('skip')">Skip All</button>
+      <button class="btn-sm" onclick="resolveAllConflicts('overwrite')">Overwrite All</button>
+    </div>
+    <div id="conflictList" class="conflict-list"></div>
+    <div class="modal-acts" style="margin-top:16px">
+      <button class="btn-cancel" onclick="cancelImport()">Cancel</button>
+      <button class="btn-go" style="flex:2;font-size:18px;padding:12px" onclick="confirmImport()">Import</button>
+    </div>
+  </div>
+</div>
 
-  <!-- ══ SCRIPTS — order matters ══ -->
-  <script src="tf-lite.js"></script>
-  <script src="bowlers.js"></script>
-  <script src="app.js"></script>
-  <script src="pwa.js"></script>
+<div class="toast" id="toast"></div>
 
+<div class="install-banner" id="installBanner">
+  <div class="install-icon">&#x1F3CF;</div>
+  <div class="install-text"><strong>Install Speed Gun</strong><span>Full-screen &amp; offline access</span></div>
+  <div class="install-actions">
+    <button class="btn-install" id="btnInstall">Install</button>
+    <button class="btn-install-dismiss" onclick="dismissInstall()">Not now</button>
+  </div>
+</div>
+
+<div class="ios-nudge" id="iosNudge">
+  <div class="ios-nudge-title">Install Speed Gun</div>
+  <div class="ios-nudge-steps">Tap <strong>Share</strong> below, then<br><strong>"Add to Home Screen"</strong></div>
+  <div class="ios-nudge-arrow">&#x2B07;</div><br><br>
+  <button class="btn-ios-dismiss" onclick="dismissInstall()">Dismiss</button>
+</div>
+
+<script src="bowlers.js"></script>
+<script src="video.js"></script>
+<script src="analyser.js"></script>
+<script src="review.js"></script>
+<script src="app.js"></script>
+<script src="pwa.js"></script>
 </body>
 </html>

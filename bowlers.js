@@ -105,62 +105,6 @@ function bowlerInitials(name) {
 }
 
 /* ─────────────────────────────────────
-   PHOTO CAPTURE
-───────────────────────────────────── */
-let photoCaptureStream   = null;
-let photoCaptureCallback = null;
-let photoCaptureTarget   = null; // bowler id to update, or null for new bowler
-
-async function openPhotoCapture(bowlerId = null, onCapture = null) {
-  photoCaptureTarget   = bowlerId;
-  photoCaptureCallback = onCapture;
-
-  try {
-    photoCaptureStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 400 }, height: { ideal: 400 } },
-      audio: false
-    });
-    document.getElementById('photoVideo').srcObject = photoCaptureStream;
-    document.getElementById('photoModal').classList.remove('hidden');
-  } catch (e) {
-    toast('Camera access denied', true);
-  }
-}
-
-function capturePhoto() {
-  const video  = document.getElementById('photoVideo');
-  const canvas = document.createElement('canvas');
-  const size   = Math.min(video.videoWidth, video.videoHeight);
-  canvas.width  = 200;
-  canvas.height = 200;
-  const ctx = canvas.getContext('2d');
-
-  // Centre-crop to square
-  const sx = (video.videoWidth  - size) / 2;
-  const sy = (video.videoHeight - size) / 2;
-  ctx.drawImage(video, sx, sy, size, size, 0, 0, 200, 200);
-
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-  closePhotoCapture();
-
-  if (photoCaptureTarget) {
-    bowlerUpdatePhoto(photoCaptureTarget, dataUrl);
-  }
-  if (photoCaptureCallback) {
-    photoCaptureCallback(dataUrl);
-  }
-}
-
-function closePhotoCapture() {
-  if (photoCaptureStream) {
-    photoCaptureStream.getTracks().forEach(t => t.stop());
-    photoCaptureStream = null;
-  }
-  document.getElementById('photoModal').classList.add('hidden');
-}
-
-/* ─────────────────────────────────────
    BOWLERS SCREEN — render
 ───────────────────────────────────── */
 let activeBowlerId = null; // currently selected bowler for this session
@@ -319,17 +263,13 @@ function renderDeliveryList(bowler) {
 /* ─────────────────────────────────────
    ADD BOWLER MODAL
 ───────────────────────────────────── */
-let newBowlerPhoto = null;
 
 function openAddBowler() {
-  newBowlerPhoto = null;
   document.getElementById('addBowlerName').value = '';
-  // Reset type toggle to Fast
   document.querySelectorAll('.bowler-type-tog').forEach(t => t.classList.remove('on'));
   const fastTog = document.querySelector('.bowler-type-tog[data-type="fast"]');
   if (fastTog) fastTog.classList.add('on');
   document.getElementById('addBowlerModal').classList.remove('hidden');
-  // Focus name input after a tick so keyboard appears
   setTimeout(() => document.getElementById('addBowlerName').focus(), 100);
 }
 

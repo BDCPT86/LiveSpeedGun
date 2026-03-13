@@ -1,4 +1,4 @@
-const CACHE = 'speedgun-v1';
+const CACHE_NAME = 'speedgun-v3';
 const PRECACHE = [
   './',
   './index.html',
@@ -6,17 +6,16 @@ const PRECACHE = [
   './style.css',
   './app.js',
   './bowlers.js',
-  './tf-lite.js',
+  './video.js',
+  './analyser.js',
+  './review.js',
   './pwa.js'
 ];
 
-// External CDN resources to cache on first fetch
-const CDN_CACHE = 'speedgun-cdn-v1';
-
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE)
-      .then(cache => cache.addAll(PRECACHE))
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll(PRECACHE))
       .then(() => self.skipWaiting())
   );
 });
@@ -24,43 +23,17 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE && k !== CDN_CACHE)
-            .map(k => caches.delete(k))
-      )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
-  // CDN resources (TensorFlow, fonts) — cache on first use
-  if (url.origin !== self.location.origin) {
-    e.respondWith(
-      caches.open(CDN_CACHE).then(cache =>
-        cache.match(e.request).then(cached => {
-          if (cached) return cached;
-          return fetch(e.request).then(response => {
-            if (response.ok) cache.put(e.request, response.clone());
-            return response;
-          }).catch(() => cached); // offline fallback to cached
-        })
-      )
-    );
-    return;
+  // Network-first for API calls, cache-first for assets
+  if (e.request.url.includes('anthropic.com') || e.request.url.includes('fonts.googleapis')) {
+    return; // Let these go straight to network
   }
-
-  // Local files — cache first, network fallback
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(response => {
-        if (response.ok) {
-          caches.open(CACHE).then(cache => cache.put(e.request, response.clone()));
-        }
-        return response;
-      });
-    })
+    caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
